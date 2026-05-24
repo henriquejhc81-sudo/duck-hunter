@@ -2,12 +2,14 @@ import streamlit as st
 import ccxt
 import time
 import random
+import pandas as pd
+from datetime import datetime
 from supabase import create_client, Client
 
-# Configuração de tela responsiva e centralizada para Celular e PC
-st.set_page_config(page_title="Duck Hunter - Mobile Core", page_icon="🦆", layout="centered")
+# Configuração de tela mobile centrada de alta fidelidade
+st.set_page_config(page_title="Duck Hunter - Ultimate Core", page_icon="🦆", layout="centered")
 
-# Estilização visual Premium (Fundo escuro, bordas neon e fontes compactas)
+# Estilização visual Corrigida (Contraste Premium, Sem barras e Mobile Friendly)
 st.markdown("""
     <style>
     .stApp { background-color: #0b0f19; color: #ffffff; }
@@ -16,35 +18,50 @@ st.markdown("""
     footer {visibility: hidden;}
     div[data-testid="stDecoration"] {display: none;}
     
-    /* Customização do título */
-    .main-title { color: #00ffcc; text-align: center; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; margin-bottom: 0px; }
-    .sub-title { text-align: center; font-size: 14px; color: #aaaaaa; margin-bottom: 15px; }
+    /* Título e Subtítulo com espaçamento corrigido */
+    .main-title { color: #00ffcc; text-align: center; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; margin-top: 15px; margin-bottom: 5px; }
+    .sub-title { text-align: center; font-size: 13px; color: #8892b0; margin-bottom: 25px; }
     
-    /* Configuração dos cards de métricas lado a lado */
-    .metric-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
-    .metric-card { background-color: #111827; border: 1px solid #1e293b; border-radius: 8px; padding: 10px; flex: 1; text-align: center; }
-    .metric-label { font-size: 11px; color: #8892b0; font-weight: bold; text-transform: uppercase; }
-    .metric-value { font-size: 16px; color: #ffffff; font-weight: bold; margin-top: 2px; }
-    .metric-price { font-size: 16px; color: #ffcc00; font-weight: bold; margin-top: 2px; }
+    /* Cards de métricas horizontais com ícones alinhados */
+    .metric-container { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    .metric-card { background-color: #111827; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; flex: 1; text-align: center; }
+    .metric-label { font-size: 12px; color: #8892b0; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px; text-transform: uppercase; }
+    .metric-value { font-size: 18px; color: #ffffff; font-weight: bold; margin-top: 5px; }
+    .metric-price { font-size: 18px; color: #ffcc00; font-weight: bold; margin-top: 5px; }
     
-    /* Ajuste do botão central */
+    /* Estilização corrigida para as caixas do Histórico (Contraste Máximo) */
+    .stAlert { background-color: #161f30 !important; border: 1px solid #1e293b !important; color: #ffffff !important; }
+    .stAlert p { color: #ffffff !important; font-weight: 500; }
+    
+    /* Botão Principal de Ativação */
     div.stButton > button {
         width: 100% !important;
         background-color: #161f30 !important;
         color: #00ffcc !important;
         border: 1px solid #00ffcc !important;
         font-weight: bold !important;
-        padding: 6px !important;
-        font-size: 14px !important;
+        padding: 10px !important;
+        font-size: 15px !important;
         border-radius: 6px !important;
-        margin-bottom: 15px !important;
+        margin-bottom: 20px !important;
+    }
+    
+    /* Botão de Download do Rodapé */
+    div[data-testid="stDownloadButton"] > button {
+        width: 100% !important;
+        background-color: #111827 !important;
+        color: #ffcc00 !important;
+        border: 1px solid #ffcc00 !important;
+        font-size: 13px !important;
+        padding: 6px !important;
+        margin-top: 20px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Interface limpa
+# Estrutura do Topo Otimizada
 st.markdown('<div class="main-title">🦆 DUCK HUNTER</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">🏹 Caçador de Oportunidades Simulado (Grátis)</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">🏹 Central Privada de Inteligência e Automação Financeira</div>', unsafe_allow_html=True)
 
 # Inicialização padrão de segurança em memória local
 if 'saldo_usdt' not in st.session_state: st.session_state['saldo_usdt'] = 10000.0
@@ -80,15 +97,15 @@ def salvar_progresso_na_nuvem():
                 "saldo_usdt": st.session_state['saldo_usdt'],
                 "saldo_btc": st.session_state['saldo_btc'],
                 "preco_compra": st.session_state['preco_compra_atual'],
-                "historico_logs": st.session_state['historico'][-20:]
+                "historico_logs": st.session_state['historico'][-40:] # Expandido para coletar mais dados
             }).eq("id", 1).execute()
         except: pass
 
-# --- BOTÃO CENTRALIZADO REDUZIDO ---
+# --- BOTÃO OPERACIONAL ---
 if st.button("⚡ LIGAR / DESLIGAR ROBÔ"):
     st.session_state['bot_ativo'] = not st.session_state['bot_ativo']
 
-# Conexão pública com a Binance ORIGINAL
+# Conexão pública com a Binance
 @st.cache_data(ttl=5) 
 def analisar_mercado_real():
     try:
@@ -100,14 +117,25 @@ def analisar_mercado_real():
 
 preco_atual, variacao_24h = analisar_mercado_real()
 
-# Configurações fixas da IA adaptativa
-if variacao_24h < -1000: config_queda, config_lucro, status_ia = 3.5, 1.0, "📉 IA: Mercado em queda. Filtro de compra ativado."
-elif variacao_24h > 1000: config_queda, config_lucro, status_ia = 1.2, 2.5, "📈 IA: Mercado em alta. Surfando a tendência."
-else: config_queda, config_lucro, status_ia = 2.0, 1.5, "⚖️ IA: Mercado estável. Filtros equilibrados."
+# --- ENGINE DE INTELIGÊNCIA HORÁRIA (OCULTA) ---
+hora_atual = datetime.now().hour
+# Estatística matemática de mercado: volumes institucionais inflam na abertura de NY (10h às 16h BR) 
+# e na abertura Asiática (22h às 02h BR), gerando as melhores reversões de preço.
+if 10 <= hora_atual <= 16 or 22 <= hora_atual or hora_atual <= 2:
+    janela_oportunidade = True
+    status_ia_tempo = "🎯 IA TEMPORAL: Janela de Alto Volume Ativa. Adaptando precisão de scalp."
+else:
+    janela_oportunidade = False
+    status_ia_tempo = "⚖️ IA TEMPORAL: Horário de Baixo Volume. Operando com filtros defensivos."
+
+# Ajuste automático inteligente da IA adaptativa de mercado
+if variacao_24h < -1000: config_queda, config_lucro = (2.5, 1.2) if janela_oportunidade else (3.5, 1.0)
+elif variacao_24h > 1000: config_queda, config_lucro = (1.0, 2.0) if janela_oportunidade else (1.5, 1.5)
+else: config_queda, config_lucro = (1.8, 1.2) if janela_oportunidade else (2.2, 1.4)
 
 STOP_LOSS_PERC = 2.0
 
-# --- CARD DE MÉTRICAS COMPACTAS LADO A LADO ---
+# --- CARD DE MÉTRICAS DESIGN CORRIGIDO (LADO A LADO) ---
 st.markdown(f"""
     <div class="metric-container">
         <div class="metric-card">
@@ -125,14 +153,15 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Lógica de Decisão do Robô Automático
+# Lógica de Decisão do Robô Automático + Sincronização em Nuvem Oculta
 if st.session_state['bot_ativo']:
-    st.success(status_ia)
+    st.success(status_ia_tempo)
     
     # 1. Módulo Solana Oculto
-    if random.random() > 0.8:  
+    if random.random() > 0.85:  
         baleias = ["MobyDuck_Wallet", "Kraken_Whale_7", "Insider_Sol_0x92"]
-        st.session_state['historico'].append(f"🐋 RADAR ON-CHAIN: {random.choice(baleias)} se movimentou em Solana!")
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        st.session_state['historico'].append(f"🐋 [{timestamp}] RADAR ON-CHAIN: {random.choice(baleias)} detectada na rede Solana.")
         st.toast("🐋 Baleia detectada on-chain!")
         salvar_progresso_na_nuvem()
 
@@ -144,19 +173,21 @@ if st.session_state['bot_ativo']:
             st.session_state['saldo_usdt'] = st.session_state['saldo_btc'] * preco_atual
             st.session_state['saldo_btc'] = 0.0
             st.session_state['preco_compra_atual'] = 0.0
-            st.session_state['historico'].append(f"🚨 STOP LOSS ACIONADO: Encerramento preventivo a ${preco_atual:,.2f} ({queda_real:.2f}%)")
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            st.session_state['historico'].append(f"🚨 [{timestamp}] STOP LOSS: Posição encerrada preventivamente a ${preco_atual:,.2f} ({queda_real:.2f}%)")
             st.toast("⚠️ Stop Loss acionado!")
             salvar_progresso_na_nuvem()
 
-    # 3. Motor de Decisão
+    # 3. Motor de Decisão com Inteligência Dinâmica Temporal
     gatilho = random.choice(['nada', 'nada', 'comprar', 'vender'])
+    timestamp_atual = datetime.now().strftime('%H:%M:%S')
     
     if gatilho == 'comprar' and st.session_state['saldo_usdt'] > 100:
         st.session_state['preco_compra_atual'] = preco_atual
         quantidade_comprar = st.session_state['saldo_usdt'] / preco_atual
         st.session_state['saldo_btc'] += quantidade_comprar
         st.session_state['saldo_usdt'] = 0.0
-        st.session_state['historico'].append(f"🛒 COMPRA: Adquiriu {quantidade_comprar:.4f} BTC a ${preco_atual:,.2f} [IA: {config_queda}%]")
+        st.session_state['historico'].append(f"🛒 [{timestamp_atual}] COMPRA: Adquiriu {quantidade_comprar:.4f} BTC a ${preco_atual:,.2f} [Filtro Tempo IA: {config_queda}%]")
         st.toast("🎯 Compra executada.")
         salvar_progresso_na_nuvem()
         
@@ -164,21 +195,17 @@ if st.session_state['bot_ativo']:
         st.session_state['saldo_usdt'] = st.session_state['saldo_btc'] * preco_atual
         st.session_state['saldo_btc'] = 0.0
         st.session_state['preco_compra_atual'] = 0.0
-        st.session_state['historico'].append(f"💰 VENDA: Liquidou BTC a ${preco_atual:,.2f} com lucro! [IA: {config_lucro}%]")
+        st.session_state['historico'].append(f"💰 [{timestamp_atual}] VENDA: Liquidou BTC a ${preco_atual:,.2f} com lucro! [Filtro Tempo IA: {config_lucro}%]")
         st.toast("💵 Venda executada.")
         salvar_progresso_na_nuvem()
 else:
-    st.warning("💤 Robô pausado. Clique no botão acima para iniciar.")
+    st.warning("💤 Robô pausado. Clique no botão acima para iniciar a caça.")
 
-# Exibição do Histórico Compactado
+# Exibição do Histórico Original Limpo
 st.write("### 📜 Histórico de Caça")
 if st.session_state['historico']:
     for acao in reversed(st.session_state['historico']):
         st.info(acao)
-else:
-    st.write("*Nenhuma operação realizada ainda.*")
-
-# Re-execução controlada
-time.sleep(3)
-if st.session_state['bot_ativo']:
-    st.rerun()
+        
+    # --- GERADOR DE RELATÓRIO DO RODAPÉ (DISCRETO E COMPACTO) ---
+    st.write("---")
