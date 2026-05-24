@@ -91,11 +91,10 @@ def conectar_banco_silencioso():
 
 db_client = conectar_banco_silencioso()
 
-# BLINDAGEM DE MEMÓRIA: Mantém o banco de dados leve deletando os logs antigos automaticamente
+# BLINDAGEM DE MEMÓRIA
 def salvar_progresso_na_nuvem():
     if db_client:
         try:
-            # Trava de segurança: Guarda no máximo as últimas 30 linhas de log para não estourar o limite grátis
             logs_otimizados = st.session_state['historico'][-30:]
             db_client.table("duck_memory").update({
                 "saldo_usdt": st.session_state['saldo_usdt'],
@@ -154,17 +153,16 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- GERADOR DE RELATÓRIO POSICIONADO NO TOPO (MUITO MAIS ACESSÍVEL) ---
-if st.session_state['historico']:
-    df_relatorio = pd.DataFrame(st.session_state['historico'], columns=["Registro de Operação do Sistema"])
-    csv_data = df_relatorio.to_csv(index=False).encode('utf-8')
-    
-    st.download_button(
-        label="📥 Baixar Relatório de Caça (CSV)",
-        data=csv_data,
-        file_name=f"duck_hunter_report_{datetime.now().strftime('%d_%m_%Y')}.csv",
-        mime="text/csv"
-    )
+# --- GERADOR DE RELATÓRIO FIXO NO TOPO ---
+df_relatorio = pd.DataFrame(st.session_state['historico'] if st.session_state['historico'] else ["Sistema Inicializado"], columns=["Registro de Operação do Sistema"])
+csv_data = df_relatorio.to_csv(index=False).encode('utf-8')
+
+st.download_button(
+    label="📥 Baixar Relatório de Caça (CSV)",
+    data=csv_data,
+    file_name=f"duck_hunter_report_{datetime.now().strftime('%d_%m_%Y')}.csv",
+    mime="text/csv"
+)
 
 # Lógica de Decisão do Robô Automático + Sincronização em Nuvem Oculta
 if st.session_state['bot_ativo']:
@@ -210,3 +208,9 @@ if st.session_state['bot_ativo']:
         st.session_state['preco_compra_atual'] = 0.0
         st.session_state['historico'].append(f"💰 [{timestamp_atual}] VENDA: Liquidou BTC a ${preco_atual:,.2f} com lucro! [Filtro Tempo IA: {config_lucro}%]")
         st.toast("💵 Venda executada.")
+        salvar_progresso_na_nuvem()
+else:
+    st.warning("💤 Robô pausado. Clique no botão acima para iniciar a caça.")
+
+# Exibição do Histórico Original Limpo
+st.write("### 📜 Histórico de Caça")
