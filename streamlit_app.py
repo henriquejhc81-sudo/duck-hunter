@@ -27,6 +27,12 @@ moedas_binance = st.sidebar.multiselect(
 )
 volume_minimo_binance = st.sidebar.slider("Volume Mínimo Gatilho (Milhões USD)", 5, 200, 20)
 
+# --- SEÇÃO SECRETA DO TELEGRAM ---
+st.sidebar.write("---")
+st.sidebar.header("📡 INTEGRAÇÃO TELEGRAM")
+telegram_token = st.sidebar.text_input("Bot Token (Opcional):", value="", type="password")
+telegram_chat_id = st.sidebar.text_input("Chat ID (Opcional):", value="")
+
 # Memória persistente otimizada
 if 'historico_consolidado' not in st.session_state:
     st.session_state.historico_consolidado = []
@@ -38,6 +44,16 @@ if 'total_varrido' not in st.session_state:
 st.sidebar.write("---")
 if st.sidebar.button("⚡ LIGAR / DESLIGAR NÚCLEO AUTÔNOMO"):
     st.session_state.radar_ativo = not st.session_state.radar_ativo
+
+# --- FUNÇÃO DISPARADORA DO TELEGRAM ---
+def enviar_alerta_telegram(mensagem):
+    if telegram_token and telegram_chat_id:
+        url = f"https://telegram.org{telegram_token}/sendMessage"
+        payload = {"chat_id": telegram_chat_id, "text": mensagem, "parse_mode": "Markdown"}
+        try:
+            requests.post(url, json=payload, timeout=5)
+        except:
+            pass
 
 # --- ENGINES DE CAPTURA (OCULTAS) ---
 def puxar_binance():
@@ -69,21 +85,30 @@ if st.session_state.radar_ativo:
         if par in moedas_binance:
             vol_usd = float(ativo.get('quoteVolume', 0)) / 1_000_000
             if vol_usd >= volume_minimo_binance:
-                # Só adiciona no histórico se for um evento novo recente
                 if not any(h['Alvo/Carteira'] == par for h in st.session_state.historico_consolidado[:2]):
+                    detalhe_texto = f"Preço: ${float(ativo.get('lastPrice', 0)):,.2f}"
+                    impacto_texto = f"${vol_usd:.1f}M Vol"
+                    
                     st.session_state.historico_consolidado.insert(0, {
                         "Origem": "OFF-CHAIN (BINANCE)",
                         "Alvo/Carteira": par,
-                        "Detalhe": f"Preço: ${float(ativo.get('lastPrice', 0)):,.2f}",
-                        "Impacto Estimado": f"${vol_usd:.1f}M Vol"
+                        "Detalhe": detalhe_texto,
+                        "Impacto Estimado": impacto_texto
                     })
+                    
+                    # Disparo automático para o Telegram por trás dos panos
+                    msg = f"🦆 *DUCK HUNTER ALERT*\n\n📊 *Origem:* Binance\n🪙 *Ativo:* {par}\n📈 *Detalhe:* {detalhe_texto}\n🔥 *Impacto:* {impacto_texto}"
+                    enviar_alerta_telegram(msg)
 
     # 2. Executa Scanner Solana
     nova_tx = escanear_solana_whales()
     if nova_tx:
         st.session_state.historico_consolidado.insert(0, nova_tx)
+        # Disparo automático para o Telegram por trás dos panos
+        msg = f"🦆 *DUCK HUNTER ALERT*\n\n🔗 *Origem:* Solana On-Chain\n🐋 *Carteira:* {nova_tx['Alvo/Carteira']}\n📦 *Movimentou:* {nova_tx['Detalhe']}\n💰 *Valor:* {nova_tx['Impacto Estimado']}"
+        enviar_alerta_telegram(msg)
 
-# --- INTERFACE LIMPA (DASHBOARD ANTIPOLUIÇÃO) ---
+# --- INTERFACE VISUAL EXATAMENTE IGUAL AO SEU PRINT ---
 col1, col2, col3 = st.columns(3)
 with col1:
     status_radar = "🟢 NÚCLEO OPERANDO EM SEGUNDO PLANO" if st.session_state.radar_ativo else "🔴 SISTEMA EM ESPERA"
@@ -96,15 +121,13 @@ with col3:
 st.write("---")
 st.subheader("📋 Central de Log de Inteligência Consolidada")
 
-# Exibe os dados de forma limpa em uma tabela estruturada em vez de blocos gigantes
 if st.session_state.historico_consolidado:
-    # Transforma a lista de dados em uma tabela limpa (Pandas Dataframe)
-    df = pd.DataFrame(st.session_state.historico_consolidado[:20]) # Mostra apenas as top 20 para não sobrecarregar
+    df = pd.DataFrame(st.session_state.historico_consolidado[:20])
     st.dataframe(df, use_container_width=True, hide_index=True)
 else:
     st.info("O banco de dados de inteligência está vazio. Ligue o núcleo autônomo para iniciar a alimentação dos logs.")
 
-# Ciclo automático rápido de 4 segundos em segundo plano
+# Ciclo de 4 segundos
 time.sleep(4)
 if st.session_state.radar_ativo:
     st.rerun()
