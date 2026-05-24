@@ -1,94 +1,107 @@
 import streamlit as st
-import ccxt
+import requests
 import time
-import random
 
-# Configuração da página do Streamlit com estilo Dark/Cyberpunk
-st.set_page_config(page_title="Duck Hunter - Auto Bot", page_icon="🦆", layout="wide")
+# Configuração visual Cyberpunk do Duck Hunter
+st.set_page_config(page_title="Duck Hunter - Volume Tracker", page_icon="🦆", layout="wide")
 
-# Estilização visual (Tema Escuro e Verde Neon)
 st.markdown("""
     <style>
-    .stApp { background-color: #0b0f19; color: #ffffff; }
-    h1 { color: #00ffcc !important; text-align: center; font-family: 'Courier New', monospace; }
-    .status-box { background-color: #161f30; padding: 20px; border-radius: 10px; border: 1px solid #00ffcc; }
+    .stApp { background-color: #060913; color: #ffffff; }
+    h1 { color: #ffcc00 !important; text-align: center; font-family: 'Courier New', monospace; }
+    .baleia-detectada { background-color: #111827; padding: 15px; border-radius: 8px; border-left: 5px solid #00ffcc; margin-bottom: 10px; border-right: 5px solid #00ffcc; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🦆 DUCK HUNTER — AUTO BOT V1")
-st.write("### 🏹 Caçador de Oportunidades em Modo Simulado (Grátis)")
-
-# Inicializa variáveis na memória do navegador para o robô não esquecer o saldo
-if 'saldo_usdt' not in st.session_state:
-    st.session_state.saldo_usdt = 10000.0  # Dinheiro de mentira para testar
-    st.session_state.saldo_btc = 0.0
-    st.session_state.historico = []
-    st.session_state.bot_ativo = False
-
-# Conexão pública com a Binance (Apenas para ler preços, sem precisar de chaves privadas)
-@st.cache_data(ttl=5) # Atualiza o preço a cada 5 segundos
-def pegar_preco_bitcoin():
-    try:
-        exchange = ccxt.binance()
-        ticker = exchange.fetch_ticker('BTC/USDT')
-        return ticker['last']
-    except:
-        # Se a API da Binance falhar/bloquear temporariamente, gera um preço simulado próximo do real
-        return random.randint(62000, 65000)
-
-preco_atual = pegar_preco_bitcoin()
+st.title("🦆 DUCK HUNTER — WHALE TRACKER V2")
+st.write("### 📡 Scanner de Volume das Baleias (100% Gratuito - Sem chaves)")
 
 # Painel Lateral de Controle
-st.sidebar.header("🕹️ PAINEL DE CONTROLE")
-config_queda = st.sidebar.slider("Comprar se cair (%)", 0.5, 5.0, 1.5, step=0.1)
-config_lucro = st.sidebar.slider("Vender se subir (%)", 0.5, 10.0, 2.0, step=0.1)
+st.sidebar.header("🕹️ CONFIGURAÇÕES DO RADAR")
+moedas_para_rastrear = st.sidebar.multiselect(
+    "Escolha as moedas para caçar:",
+    ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'ADAUSDT', 'DOGEUSDT'],
+    default=['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
+)
 
-if st.sidebar.button("⚡ LIGAR / DESLIGAR ROBÔ"):
-    st.session_state.bot_ativo = not st.session_state.bot_ativo
+# Filtro de volume agressivo
+volume_gatilho = st.sidebar.slider("Volume Mínimo nas últimas 24h (Milhões de USD)", 10, 500, 50)
 
-# Corpo Principal - Estatísticas
-col1, col2, col3 = st.columns(3)
+if 'radar_ativo' not in st.session_state:
+    st.session_state.radar_ativo = False
+    st.session_state.alertas_baleias = []
+
+if st.sidebar.button("⚡ LIGAR / DESLIGAR RADAR"):
+    st.session_state.radar_ativo = not st.session_state.radar_ativo
+
+# Estatísticas na tela principal
+col1, col2 = st.columns(2)
 with col1:
-    st.metric(label="💰 Seu Saldo USDT", value=f"${st.session_state.saldo_usdt:,.2f}")
+    status = "🟢 RADAR CAÇANDO BALEIAS..." if st.session_state.radar_ativo else "🔴 RADAR DESLIGADO"
+    st.metric(label="Status do Sistema", value=status)
 with col2:
-    st.metric(label="🪙 Seu Saldo BTC", value=f"{st.session_state.saldo_btc:.4f} BTC")
-with col3:
-    st.metric(label="📊 Preço do BTC (Binance)", value=f"${preco_atual:,.2f}", delta="Atualizado em Tempo Real")
+    st.metric(label="Anomalias Detectadas", value=len(st.session_state.alertas_baleias))
 
-# Lógica de Decisão do Robô Automático
-if st.session_state.bot_ativo:
-    st.success("🤖 O DUCK BOT ESTÁ RODANDO E CAÇANDO PADRÕES AGORA...")
-    
-    # Simulação básica de estratégia baseada em preço atual
-    # Para o MVP visual, geramos um gatilho aleatório curto para você ver o robô comprando e vendendo sozinho na tela
-    gatilho = random.choice(['nada', 'nada', 'comprar', 'vender'])
-    
-    if gatilho == 'comprar' and st.session_state.saldo_usdt > 100:
-        quantidade_comprar = st.session_state.saldo_usdt / preco_atual
-        st.session_state.saldo_btc += quantidade_comprar
-        st.session_state.saldo_usdt = 0.0
-        st.session_state.historico.append(f"🛒 COMPRA AUTOMÁTICA: Adquiriu {quantidade_comprar:.4f} BTC ao preço de ${preco_atual:,.2f}")
-        st.toast("🎯 Oportunidade detectada! Compra executada.")
-        
-    elif gatilho == 'vender' and st.session_state.saldo_btc > 0:
-        lucro_usdt = st.session_state.saldo_btc * preco_atual
-        st.session_state.saldo_usdt = lucro_usdt
-        st.session_state.saldo_btc = 0.0
-        st.session_state.historico.append(f"💰 VENDA AUTOMÁTICA: Liquidou BTC ao preço de ${preco_atual:,.2f} com lucro!")
-        st.toast("💵 Tesouro resgatado! Venda executada.")
-else:
-    st.warning("💤 Robô pausado. Clique em 'LIGAR' no painel lateral para iniciar a caça.")
-
-# Exibição do Histórico de Operações do Arqueólogo
 st.write("---")
-st.write("### 📜 Histórico de Caça do Duck Hunter")
-if st.session_state.historico:
-    for acao in reversed(st.session_state.historico):
-        st.info(acao)
-else:
-    st.write("*Nenhuma operação realizada ainda. Ligue o robô e aguarde os ciclos.*")
+st.write("### 🌊 Movimentações Suspeitas do Mercado (Direto da Binance)")
 
-# Botão manual para forçar a atualização da tela
-time.sleep(2)
-if st.session_state.bot_ativo:
+# Função para ler os dados da API pública e grátis da Binance
+def escanear_binance():
+    url = "https://binance.com"
+    try:
+        resposta = requests.get(url)
+        if resposta.status_code == 200:
+            return resposta.json()
+    except:
+        return []
+    return []
+
+if st.session_state.radar_ativo:
+    st.toast("🔍 Vasculhando o livro de ordens da Binance...")
+    dados_mercado = escanear_binance()
+    
+    for ativo in dados_mercado:
+        par_moeda = ativo.get('symbol')
+        
+        # Filtra apenas as moedas que você escolheu na barra lateral
+        if par_moeda in moedas_para_rastrear:
+            preco_atual = float(ativo.get('lastPrice', 0))
+            volume_financeiro = float(ativo.get('quoteVolume', 0)) # Volume em dólares
+            variacao_preco = float(ativo.get('priceChangePercent', 0))
+            
+            volume_em_milhoes = volume_financeiro / 1_000_000
+            
+            # Se o volume da moeda ultrapassar o que você configurou, gera o alerta
+            if volume_em_milhoes >= volume_gatilho:
+                alerta_id = f"{par_moeda}-{time.time()}"
+                
+                # Evita duplicar alertas muito rápido na tela
+                if not any(a['moeda'] == par_moeda for a in st.session_state.alertas_baleias[:3]):
+                    novo_alerta = {
+                        "moeda": par_moeda,
+                        "preco": preco_atual,
+                        "volume": volume_em_milhoes,
+                        "variacao": variacao_preco
+                    }
+                    st.session_state.alertas_baleias.insert(0, novo_alerta)
+                    st.toast(f"🚨 MOVIMENTAÇÃO FORTE EM {par_moeda}!")
+
+# Mostrar os resultados na tela com estilo Hacker
+if st.session_state.alertas_baleias:
+    for alerta in st.session_state.alertas_baleias[:15]: # Mostra as últimas 15 movimentações
+        cor_variacao = "🟢" if alerta['variacao'] >= 0 else "🔴"
+        
+        st.markdown(f"""
+            <div class="baleia-detectada">
+                <h4>🪙 PAR DE TRADING: {alerta['moeda']}</h4>
+                <p><b>Preço Atual:</b> ${alerta['preco']:,.2f} | Variação nas últimas 24h: {cor_variacao} {alerta['variacao']:.2f}%</p>
+                <p style="color: #ffcc00;"><b>🐋 Volume Injetado pelas Baleias: ${alerta['volume']:,.2f} MILHÕES DE DÓLARES</b></p>
+            </div>
+        """, unsafe_allow_html=True)
+else:
+    st.info("🦆 O radar está monitorando os dados públicos... Ligue o radar para caçar o volume das baleias.")
+
+# Sistema de recarregamento automático a cada 5 segundos
+time.sleep(5)
+if st.session_state.radar_ativo:
     st.rerun()
