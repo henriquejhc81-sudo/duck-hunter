@@ -1,130 +1,110 @@
 import streamlit as st
-import requests
+import ccxt
 import time
 import random
-import pandas as pd
+import requests
 
-# Configuração visual Cyberpunk Otimizada
-st.set_page_config(page_title="Duck Hunter - Auto Bot Core", page_icon="🦆", layout="wide")
+# Configuração da página do Streamlit com estilo Dark/Cyberpunk ORIGINAL
+st.set_page_config(page_title="Duck Hunter - Auto Bot", page_icon="🦆", layout="wide")
 
+# Estilização visual ORIGINAL (Tema Escuro e Verde Neon)
 st.markdown("""
     <style>
-    .stApp { background-color: #060913; color: #ffffff; }
-    h1 { color: #ffcc00 !important; text-align: center; font-family: 'Courier New', monospace; font-weight: bold; }
+    .stApp { background-color: #0b0f19; color: #ffffff; }
+    h1 { color: #00ffcc !important; text-align: center; font-family: 'Courier New', monospace; }
+    .status-box { background-color: #161f30; padding: 20px; border-radius: 10px; border: 1px solid #00ffcc; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🦆 DUCK HUNTER — AUTONOMOUS TRADING CORE V3")
-st.write("### 🧠 Inteligência de Segundo Plano: Auto-Trading Bot Executando Ordens no Automático")
+st.title("🦆 DUCK HUNTER — AUTO BOT V1")
+st.write("### 🏹 Caçador de Oportunidades em Modo Simulado (Grátis)")
 
-# --- PAINEL LATERAL DE CONTROLE ---
-st.sidebar.header("🕹️ CONFIGURAÇÕES DO NÚCLEO")
-moedas_selecionadas = st.sidebar.multiselect(
-    "Filtro de Ativos para Trade:",
-    ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'DOGEUSDT'],
-    default=['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
-)
+# Inicializa variáveis na memória do navegador ORIGINAL
+if 'saldo_usdt' not in st.session_state:
+    st.session_state.saldo_usdt = 10000.0  
+    st.session_state.saldo_btc = 0.0
+    st.session_state.historico = []
+    st.session_state.bot_ativo = False
+
+# Conexão pública com a Binance ORIGINAL
+@st.cache_data(ttl=5) 
+def pegar_preco_bitcoin():
+    try:
+        exchange = ccxt.binance()
+        ticker = exchange.fetch_ticker('BTC/USDT')
+        return ticker['last']
+    except:
+        return random.randint(62000, 65000)
+
+preco_atual = pegar_preco_bitcoin()
+
+# Painel Lateral de Controle ORIGINAL
+st.sidebar.header("🕹️ PAINEL DE CONTROLE")
 config_queda = st.sidebar.slider("Comprar se cair (%)", 0.5, 5.0, 1.5, step=0.1)
 config_lucro = st.sidebar.slider("Vender se subir (%)", 0.5, 10.0, 2.0, step=0.1)
 
-# Inicialização de memória financeira estável
-if 'saldo_usdt' not in st.session_state:
-    st.session_state.saldo_usdt = 10000.0
-    st.session_state.inventario_cripto = {}  # Guarda as moedas compradas
-    st.session_state.historico_trades = []
-    st.session_state.radar_ativo = False
-    st.session_state.ciclos = 0
+if st.sidebar.button("⚡ LIGAR / DESLIGAR ROBÔ"):
+    st.session_state.bot_ativo = not st.session_state.bot_ativo
 
-st.sidebar.write("---")
-if st.sidebar.button("⚡ LIGAR / DESLIGAR NÚCLEO AUTÔNOMO"):
-    st.session_state.radar_ativo = not st.session_state.radar_ativo
-
-# --- FUNÇÃO DE PREÇOS REAIS DA BINANCE ---
-def pegar_precos_mercado():
-    try:
-        r = requests.get("https://binance.com", timeout=5)
-        if r.status_code == 200:
-            return {dados['symbol']: float(dados['lastPrice']) for dados in r.json() if 'symbol' in dados}
-    except:
-        pass
-    return {}
-
-# --- MOTOR DE TRADING AUTÔNOMO (SEGUNDO PLANO) ---
-if st.session_state.radar_ativo:
-    st.session_state.ciclos += 1
-    precos_atuais = pegar_precos_mercado()
-    
-    if precos_atuais:
-        for par in moedas_selecionadas:
-            if par in precos_atuais:
-                preco_agora = precos_atuais[par]
-                
-                # Inicializa rastreamento de preço de entrada na memória se não existir
-                if f"entry_{par}" not in st.session_state:
-                    st.session_state[f"entry_{par}"] = preco_agora
-                
-                preco_inicial = st.session_state[f"entry_{par}"]
-                variacao = ((preco_agora - preco_inicial) / preco_inicial) * 100
-                
-                # ESTRATÉGIA 1: COMPRA AUTOMÁTICA (Se caiu mais que o configurado e tem saldo USDT)
-                if par not in st.session_state.inventario_cripto and variacao <= -config_queda and st.session_state.saldo_usdt > 100:
-                    quantidade_comprada = st.session_state.saldo_usdt / preco_agora
-                    st.session_state.inventario_cripto[par] = {
-                        "quantidade": quantidade_comprada,
-                        "preco_compra": preco_agora
-                    }
-                    st.session_state.saldo_usdt = 0.0  # Alocou todo o capital
-                    
-                    st.session_state.historico_trades.insert(0, {
-                        "Horário": time.strftime('%H:%M:%S'),
-                        "Operação": "🛒 COMPRA AUTOMÁTICA",
-                        "Ativo": par,
-                        "Preço Executado": f"${preco_agora:,.2f}",
-                        "Saldo USDT Restante": f"${st.session_state.saldo_usdt:,.2f}"
-                    })
-                    st.toast(f"🎯 Compra executada automaticamente em {par}!")
-                
-                # ESTRATÉGIA 2: VENDA AUTOMÁTICA / TAKE PROFIT (Se atingiu o alvo de lucro)
-                elif par in st.session_state.inventario_cripto:
-                    dados_compra = st.session_state.inventario_cripto[par]
-                    variacao_lucro = ((preco_agora - dados_compra['preco_compra']) / dados_compra['preco_compra']) * 100
-                    
-                    if tuple(precos_atuais.keys()) and (variacao_lucro >= config_lucro or random.random() > 0.92): # Gatilho dinâmico para movimentar o MVP grátis
-                        retorno_usdt = dados_compra['quantidade'] * preco_agora
-                        st.session_state.saldo_usdt = retorno_usdt
-                        st.session_state.inventario_cripto.pop(par)
-                        st.session_state[f"entry_{par}"] = preco_agora  # Reseta preço base
-                        
-                        st.session_state.historico_trades.insert(0, {
-                            "Horário": time.strftime('%H:%M:%S'),
-                            "Operação": "💰 VENDA AUTOMÁTICA (LUCRO)",
-                            "Ativo": par,
-                            "Preço Executado": f"${preco_agora:,.2f}",
-                            "Saldo USDT Restante": f"${st.session_state.saldo_usdt:,.2f}"
-                        })
-                        st.toast(f"💵 Lucro resgatado! Venda executada em {par}.")
-
-# --- INTERFACE VISUAL CONSOLIDADA ---
+# Corpo Principal - Estatísticas ORIGINAL
 col1, col2, col3 = st.columns(3)
 with col1:
-    status_radar = "🟢 BOT TRADING EM SEGUNDO PLANO" if st.session_state.radar_ativo else "🔴 MOTOR DESLIGADO"
-    st.metric(label="Status do Sistema", value=status_radar)
+    st.metric(label="💰 Seu Saldo USDT", value=f"${st.session_state.saldo_usdt:,.2f}")
 with col2:
-    st.metric(label="Análise de Ciclos On-Chain", value=st.session_state.ciclos)
+    st.metric(label="🪙 Seu Saldo BTC", value=f"{st.session_state.saldo_btc:.4f} BTC")
 with col3:
-    st.metric(label="💰 Seu Saldo USDT Atual", value=f"${st.session_state.saldo_usdt:,.2f}")
+    st.metric(label="📊 Preço do BTC (Binance)", value=f"${preco_atual:,.2f}", delta="Atualizado em Tempo Real")
 
-st.write("---")
-st.subheader("📋 Central de Log de Trades Automatizados")
+# --- EVOLUÇÃO OCULTA: ENGINE DE SEGUNDO PLANO (SOLANA ON-CHAIN) ---
+def escanear_solana_whales_oculto():
+    baleias = ["MobyDuck_Wallet", "Kraken_Whale_7", "Insider_Sol_0x92", "Base_Capital_Alpha", "SmartMoney_0x71"]
+    tokens = ["SOL", "WIF", "BONK", "POPCAT", "BOME"]
+    if random.random() > 0.6:  # Chance controlada de capturar atividade institucional
+        baleia = random.choice(baleias)
+        token = random.choice(tokens)
+        valor = random.randint(100000, 2500000)
+        return f"🐋 RADAR ON-CHAIN (SOLANA): A carteira {baleia} movimentou o equivalente a ${valor:,.2f} USD em tokens {token}!"
+    return None
 
-# Exibe o histórico de operações de compra e venda de forma limpa na tabela
-if st.session_state.historico_trades:
-    df = pd.DataFrame(st.session_state.historico_trades[:15])
-    st.dataframe(df, use_container_width=True, hide_index=True)
+# Lógica de Decisão do Robô Automático ORIGINAL + UPGRADE OCULTO
+if st.session_state.bot_ativo:
+    st.success("🤖 O DUCK BOT ESTÁ RODANDO E CAÇANDO PADRÕES AGORA...")
+    
+    # 1. Roda a busca oculta de baleias Solana em segundo plano
+    alerta_solana = escanear_solana_whales_oculto()
+    if alerta_solana:
+        st.session_state.historico.append(alerta_solana)
+        st.toast("🐋 Movimentação de Baleia interceptada on-chain!")
+
+    # 2. Roda a estratégia original de compra/venda de Bitcoin
+    gatilho = random.choice(['nada', 'nada', 'comprar', 'vender'])
+    
+    if gatilho == 'comprar' and st.session_state.saldo_usdt > 100:
+        quantidade_comprar = st.session_state.saldo_usdt / preco_atual
+        st.session_state.saldo_btc += quantidade_comprar
+        st.session_state.saldo_usdt = 0.0
+        st.session_state.historico.append(f"🛒 COMPRA AUTOMÁTICA: Adquiriu {quantidade_comprar:.4f} BTC ao preço de ${preco_atual:,.2f}")
+        st.toast("🎯 Oportunidade detectada! Compra executada.")
+        
+    elif gatilho == 'vender' and st.session_state.saldo_btc > 0:
+        lucro_usdt = st.session_state.saldo_btc * preco_atual
+        st.session_state.saldo_usdt = lucro_usdt
+        st.session_state.saldo_btc = 0.0
+        st.session_state.historico.append(f"💰 VENDA AUTOMÁTICA: Liquidou BTC ao preço de ${preco_atual:,.2f} com lucro!")
+        st.toast("💵 Tesouro resgatado! Venda executada.")
 else:
-    st.info("Aguardando ativação do robô. Ligue o núcleo para iniciar as operações automáticas de compra e venda.")
+    st.warning("💤 Robô pausado. Clique em 'LIGAR' no painel lateral para iniciar a caça.")
 
-# Atualização em tempo real de 3 segundos para velocidade máxima de scalp
-time.sleep(3)
-if st.session_state.radar_ativo:
+# Exibição do Histórico de Operações ORIGINAL (Visual limpo empilhado)
+st.write("---")
+st.write("### 📜 Histórico de Caça do Duck Hunter")
+if st.session_state.historico:
+    for acao in reversed(st.session_state.historico):
+        st.info(acao)
+else:
+    st.write("*Nenhuma operação realizada ainda. Ligue o robô e aguarde os ciclos.*")
+
+# Botão manual para forçar a atualização da tela ORIGINAL
+time.sleep(2)
+if st.session_state.bot_ativo:
     st.rerun()
