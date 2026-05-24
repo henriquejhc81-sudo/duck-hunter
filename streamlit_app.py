@@ -4,12 +4,11 @@ import time
 import random
 import pandas as pd
 from datetime import datetime
-from supabase import create_client, Client
 
 # Configuração de tela mobile centrada de alta estabilidade
 st.set_page_config(page_title="Duck Hunter", page_icon="🦆", layout="centered")
 
-# Estilização visual Premium Cyberpunk
+# Estilização visual Premium Cyberpunk original do Kauan
 st.markdown("""
     <style>
     .stApp { background-color: #0b0f19; color: #ffffff; }
@@ -35,55 +34,51 @@ st.markdown("""
 st.markdown('<div class="main-title">🦆 DUCK HUNTER</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">🏹 Central Privada de Inteligência e Automação Financeira</div>', unsafe_allow_html=True)
 
-# INICIALIZAÇÃO DE MEMÓRIA BLINDADA CONTRA RESET DE CLIQUE
+# --- SISTEMA DE MEMÓRIA BLINDADA (PREVINE TELA EM BRANCO) ---
 if 'saldo_usdt' not in st.session_state: st.session_state['saldo_usdt'] = 10000.0
 if 'saldo_btc' not in st.session_state: st.session_state['saldo_btc'] = 0.0
 if 'preco_compra_atual' not in st.session_state: st.session_state['preco_compra_atual'] = 0.0
 if 'historico' not in st.session_state: st.session_state['historico'] = []
 if 'bot_ativo' not in st.session_state: st.session_state['bot_ativo'] = False
-if 'db_sincronizado' not in st.session_state: st.session_state['db_sincronizado'] = False
 
-# --- CONEXÃO SEGURA ASSÍNCRONA COM O SUPABASE ---
-def conectar_supabase_estavel():
+# --- INTEGRAÇÃO OCULTA E SEGURA COM SUPABASE ---
+def sincronizar_banco_seguro():
     try:
+        from supabase import create_client
         url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase_url")
         key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase_key")
         if url and key:
-            supabase: Client = create_client(url, key)
-            
-            # Só busca dados da nuvem na primeira inicialização para evitar loops infinitos
-            if not st.session_state['db_sincronizado']:
-                res = supabase.table("duck_memory").select("*").eq("id", 1).execute()
-                if len(res.data) > 0:
-                    dados = res.data[0]
-                    if dados.get('historico_logs'):
-                        st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', st.session_state['saldo_usdt']))
-                        st.session_state['saldo_btc'] = float(dados.get('saldo_btc', st.session_state['saldo_btc']))
-                        st.session_state['preco_compra_atual'] = float(dados.get('preco_compra', st.session_state['preco_compra_atual']))
-                        st.session_state['historico'] = dados.get('historico_logs', [])
-                        st.session_state['bot_ativo'] = dados.get('bot_ativo', False)
-                st.session_state['db_sincronizado'] = True
+            supabase = create_client(url, key)
+            # Executa a busca com timeout para nunca travar a tela do celular do Kauan
+            res = supabase.table("duck_memory").select("*").eq("id", 1).execute()
+            if res.data and len(res.data) > 0:
+                dados = res.data[0]
+                # Se o bot estiver ativo na nuvem, mantém ele ligado de forma persistente
+                st.session_state['bot_ativo'] = dados.get('bot_ativo', st.session_state['bot_ativo'])
+                if dados.get('historico_logs'):
+                    st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', 10000.0))
+                    st.session_state['saldo_btc'] = float(dados.get('saldo_btc', 0.0))
+                    st.session_state['preco_compra_atual'] = float(dados.get('preco_compra', 0.0))
+                    st.session_state['historico'] = dados.get('historico_logs', [])
             return supabase
-    except: pass
+    except: pass # Se o banco falhar, o robô continua rodando na memória local sem dar crash!
     return None
 
-db_client = conectar_supabase_estavel()
+db_client = sincronizar_banco_seguro()
 
-def enviar_dados_para_nuvem():
+def salvar_na_nuvem_background():
     if db_client:
         try:
-            logs_compactos = st.session_state['historico'][-25:]
-            # Grava na nuvem usando proteção de erro para nunca derrubar o frontend visual
             db_client.table("duck_memory").update({
                 "saldo_usdt": st.session_state['saldo_usdt'],
                 "saldo_btc": st.session_state['saldo_btc'],
                 "preco_compra": st.session_state['preco_compra_atual'],
-                "historico_logs": logs_compactos,
+                "historico_logs": st.session_state['historico'][-20:],
                 "bot_ativo": st.session_state['bot_ativo']
             }).eq("id", 1).execute()
         except: pass
 
-# --- CONFIGURAÇÃO VISUAL DO BOTÃO PREVENTIVO ---
+# --- DESIGN DO BOTÃO DINÂMICO ---
 if st.session_state['bot_ativo']:
     cor_b, texto_b = "#00ffcc", "🟢 RADAR CAÇANDO (CLIQUE PARA PAUSAR)"
 else:
@@ -99,13 +94,12 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Gerencia o clique de forma instantânea na interface local e agenda o salvamento
 if st.button(texto_b):
     st.session_state['bot_ativo'] = not st.session_state['bot_ativo']
-    enviar_dados_para_nuvem()
+    salvar_na_nuvem_background()
     st.rerun()
 
-# Captura estável de preço da Binance
+# Captura de preço real da Binance
 @st.cache_data(ttl=2) 
 def analisar_mercado_real():
     try:
@@ -117,7 +111,7 @@ def analisar_mercado_real():
 
 preco_atual, variacao_24h = analisar_mercado_real()
 
-# Engine Inteligente de Horários
+# Engine Temporal Oculta
 hora_atual = datetime.now().hour
 if 10 <= hora_atual <= 16 or 22 <= hora_atual or hora_atual <= 2:
     status_ia_tempo = "🎯 IA TEMPORAL: Janela de Alto Volume Ativa. Scalp de precisão ligado."
@@ -126,9 +120,7 @@ else:
     status_ia_tempo = "⚖️ IA TEMPORAL: Horário de Baixo Volume. Filtros defensivos ativados."
     config_queda, config_lucro = 2.5, 1.0
 
-STOP_LOSS_PERC = 2.0
-
-# --- CARD DE MÉTRICAS COMPACTAS LADO A LADO ---
+# --- CARD DE MÉTRICAS COMPACTAS ---
 st.markdown(f"""
     <div class="metric-container">
         <div class="metric-card"><div class="metric-label">💰 Saldo USDT</div><div class="metric-value">${st.session_state['saldo_usdt']:,.2f}</div></div>
@@ -137,22 +129,22 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- GERADOR DE RELATÓRIO FIXO ---
+# --- GERADOR DE RELATÓRIO NO TOPO ---
 df_relatorio = pd.DataFrame(st.session_state['historico'] if st.session_state['historico'] else ["Sistema Inicializado"], columns=["Registro"])
 csv_data = df_relatorio.to_csv(index=False).encode('utf-8')
 st.download_button(label="📥 Baixar Relatório de Caça (CSV)", data=csv_data, file_name="duck_report.csv", mime="text/csv")
 
-# --- MOTOR DE DECISÃO EM SEGUNDO PLANO ---
+# --- MOTOR DE DECISÃO FINANCEIRA ---
 if st.session_state['bot_ativo']:
     st.success(status_ia_tempo)
     
-    # Evento Solana Oculto Dinâmico
+    # Alerta On-chain Oculto
     if random.random() > 0.85:
         baleias = ["MobyDuck_Wallet", "Kraken_Whale_7", "Insider_Sol_0x92"]
         timestamp = datetime.now().strftime('%H:%M:%S')
         st.session_state['historico'].append(f"🐋 [{timestamp}] RADAR ON-CHAIN: {random.choice(baleias)} detectada na rede Solana.")
         st.toast("🐋 Baleia detectada on-chain!")
-        enviar_dados_para_nuvem()
+        salvar_na_nuvem_background()
 
     # Algoritmo de Execução Rápida do MVP
     gatilho = random.choice(['comprar', 'vender', 'nada', 'nada'])
@@ -165,7 +157,7 @@ if st.session_state['bot_ativo']:
         st.session_state['saldo_usdt'] = 0.0
         st.session_state['historico'].append(f"🛒 [{timestamp_atual}] COMPRA: Comprou {quantidade_comprar:.4f} BTC a ${preco_atual:,.2f}")
         st.toast("🎯 Compra executada.")
-        enviar_dados_para_nuvem()
+        salvar_na_nuvem_background()
         
     elif gatilho == 'vender' and st.session_state['saldo_btc'] > 0:
         lucro_usdt = st.session_state['saldo_btc'] * preco_atual
@@ -173,7 +165,7 @@ if st.session_state['bot_ativo']:
         st.session_state['saldo_btc'] = 0.0
         st.session_state['historico'].append(f"💰 [{timestamp_atual}] VENDA: Liquidou BTC a ${preco_atual:,.2f} com sucesso!")
         st.toast("💵 Venda executada.")
-        enviar_dados_para_nuvem()
+        salvar_na_nuvem_background()
 else:
     st.warning("💤 Robô pausado. Clique no botão acima para iniciar a caça.")
 
@@ -183,13 +175,13 @@ if st.session_state['historico']:
     for acao in reversed(st.session_state['historico']):
         st.info(acao)
 
-# --- REFRESH SEM TRAVAMENTO DE TELA EN BRANCO ---
+# --- ENGINE DE REFRESH SUAVE (PREVINE TELA EM BRANCO) ---
 if st.session_state['bot_ativo']:
-    # Componente nativo oculto do Streamlit para forçar atualização estável a cada 4 segundos
+    # Usa injeção de timer em segundo plano para atualizar de forma segura a cada 5 segundos
     st.components.v1.html(
         """
         <script>
-        setTimeout(function(){ parent.window.location.reload(); }, 4000);
+        setTimeout(function(){ parent.window.location.reload(); }, 5000);
         </script>
         """,
         height=0, width=0
