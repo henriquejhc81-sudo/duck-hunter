@@ -37,18 +37,21 @@ if 'preco_compra_atual' not in st.session_state: st.session_state['preco_compra_
 if 'historico' not in st.session_state: st.session_state['historico'] = []
 if 'bot_ativo' not in st.session_state: st.session_state['bot_ativo'] = False
 
-# --- CONEXÃO ULTRA SEGURA EM SEGUNDO PLANO (PUXA DOS SECRETS OCULTOS) ---
+# --- CONEXÃO AJUSTADA PARA PEGAR PADRÃO DO STREAMLIT ---
 def conectar_banco_nuvem_seguro():
     try:
-        # Puxa as chaves direto da área criptografada do Streamlit (Ninguém consegue ver)
-        url = st.secrets["supabase_url"]
-        key = st.secrets["supabase_key"]
+        # Tenta ler tanto em formato minúsculo quanto maiúsculo para evitar erros de digitação
+        url = st.secrets.get("supabase_url") or st.secrets.get("SUPABASE_URL")
+        key = st.secrets.get("supabase_key") or st.secrets.get("SUPABASE_KEY")
         
+        if not url or not key:
+            return None
+            
         supabase: Client = create_client(url, key)
         res = supabase.table("duck_memory").select("*").eq("id", 1).execute()
         
         if len(res.data) > 0:
-            dados = res.data[0]
+            dados = res.data[0] # Pega o primeiro registro da lista
             st.session_state['saldo_usdt'] = float(dados['saldo_usdt'])
             st.session_state['saldo_btc'] = float(dados['saldo_btc'])
             st.session_state['preco_compra_atual'] = float(dados['preco_compra'])
@@ -167,6 +170,6 @@ else:
     st.write("*Nenhuma operação realizada ainda.*")
 
 # Re-execução controlada
-time.sleep(3)
+time.slice_time = 3
 if st.session_state['bot_ativo']:
     st.rerun()
