@@ -18,18 +18,18 @@ st.markdown("""
     footer {visibility: hidden;}
     div[data-testid="stDecoration"] {display: none;}
     
-    /* Título e Subtítulo com espaçamento corrigido */
+    /* Título e Subtítulo */
     .main-title { color: #00ffcc; text-align: center; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; margin-top: 15px; margin-bottom: 5px; }
     .sub-title { text-align: center; font-size: 13px; color: #8892b0; margin-bottom: 25px; }
     
-    /* Cards de métricas horizontais com ícones alinhados */
-    .metric-container { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    /* Cards de métricas horizontais */
+    .metric-container { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
     .metric-card { background-color: #111827; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; flex: 1; text-align: center; }
     .metric-label { font-size: 12px; color: #8892b0; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px; text-transform: uppercase; }
     .metric-value { font-size: 18px; color: #ffffff; font-weight: bold; margin-top: 5px; }
     .metric-price { font-size: 18px; color: #ffcc00; font-weight: bold; margin-top: 5px; }
     
-    /* Estilização corrigida para as caixas do Histórico (Contraste Máximo) */
+    /* Estilização corrigida para as caixas do Histórico */
     .stAlert { background-color: #161f30 !important; border: 1px solid #1e293b !important; color: #ffffff !important; }
     .stAlert p { color: #ffffff !important; font-weight: 500; }
     
@@ -43,23 +43,24 @@ st.markdown("""
         padding: 10px !important;
         font-size: 15px !important;
         border-radius: 6px !important;
-        margin-bottom: 20px !important;
+        margin-bottom: 15px !important;
     }
     
-    /* Botão de Download do Rodapé */
+    /* Botão de Download Otimizado no Topo */
     div[data-testid="stDownloadButton"] > button {
         width: 100% !important;
         background-color: #111827 !important;
         color: #ffcc00 !important;
         border: 1px solid #ffcc00 !important;
-        font-size: 13px !important;
-        padding: 6px !important;
-        margin-top: 20px !important;
+        font-size: 14px !important;
+        padding: 8px !important;
+        margin-bottom: 20px !important;
+        border-radius: 6px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Estrutura do Topo Otimizada
+# Estrutura do Topo
 st.markdown('<div class="main-title">🦆 DUCK HUNTER</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">🏹 Central Privada de Inteligência e Automação Financeira</div>', unsafe_allow_html=True)
 
@@ -90,14 +91,17 @@ def conectar_banco_silencioso():
 
 db_client = conectar_banco_silencioso()
 
+# BLINDAGEM DE MEMÓRIA: Mantém o banco de dados leve deletando os logs antigos automaticamente
 def salvar_progresso_na_nuvem():
     if db_client:
         try:
+            # Trava de segurança: Guarda no máximo as últimas 30 linhas de log para não estourar o limite grátis
+            logs_otimizados = st.session_state['historico'][-30:]
             db_client.table("duck_memory").update({
                 "saldo_usdt": st.session_state['saldo_usdt'],
                 "saldo_btc": st.session_state['saldo_btc'],
                 "preco_compra": st.session_state['preco_compra_atual'],
-                "historico_logs": st.session_state['historico'][-40:] # Expandido para coletar mais dados
+                "historico_logs": logs_otimizados
             }).eq("id", 1).execute()
         except: pass
 
@@ -119,8 +123,6 @@ preco_atual, variacao_24h = analisar_mercado_real()
 
 # --- ENGINE DE INTELIGÊNCIA HORÁRIA (OCULTA) ---
 hora_atual = datetime.now().hour
-# Estatística matemática de mercado: volumes institucionais inflam na abertura de NY (10h às 16h BR) 
-# e na abertura Asiática (22h às 02h BR), gerando as melhores reversões de preço.
 if 10 <= hora_atual <= 16 or 22 <= hora_atual or hora_atual <= 2:
     janela_oportunidade = True
     status_ia_tempo = "🎯 IA TEMPORAL: Janela de Alto Volume Ativa. Adaptando precisão de scalp."
@@ -128,7 +130,6 @@ else:
     janela_oportunidade = False
     status_ia_tempo = "⚖️ IA TEMPORAL: Horário de Baixo Volume. Operando com filtros defensivos."
 
-# Ajuste automático inteligente da IA adaptativa de mercado
 if variacao_24h < -1000: config_queda, config_lucro = (2.5, 1.2) if janela_oportunidade else (3.5, 1.0)
 elif variacao_24h > 1000: config_queda, config_lucro = (1.0, 2.0) if janela_oportunidade else (1.5, 1.5)
 else: config_queda, config_lucro = (1.8, 1.2) if janela_oportunidade else (2.2, 1.4)
@@ -152,6 +153,18 @@ st.markdown(f"""
         </div>
     </div>
 """, unsafe_allow_html=True)
+
+# --- GERADOR DE RELATÓRIO POSICIONADO NO TOPO (MUITO MAIS ACESSÍVEL) ---
+if st.session_state['historico']:
+    df_relatorio = pd.DataFrame(st.session_state['historico'], columns=["Registro de Operação do Sistema"])
+    csv_data = df_relatorio.to_csv(index=False).encode('utf-8')
+    
+    st.download_button(
+        label="📥 Baixar Relatório de Caça (CSV)",
+        data=csv_data,
+        file_name=f"duck_hunter_report_{datetime.now().strftime('%d_%m_%Y')}.csv",
+        mime="text/csv"
+    )
 
 # Lógica de Decisão do Robô Automático + Sincronização em Nuvem Oculta
 if st.session_state['bot_ativo']:
@@ -197,15 +210,3 @@ if st.session_state['bot_ativo']:
         st.session_state['preco_compra_atual'] = 0.0
         st.session_state['historico'].append(f"💰 [{timestamp_atual}] VENDA: Liquidou BTC a ${preco_atual:,.2f} com lucro! [Filtro Tempo IA: {config_lucro}%]")
         st.toast("💵 Venda executada.")
-        salvar_progresso_na_nuvem()
-else:
-    st.warning("💤 Robô pausado. Clique no botão acima para iniciar a caça.")
-
-# Exibição do Histórico Original Limpo
-st.write("### 📜 Histórico de Caça")
-if st.session_state['historico']:
-    for acao in reversed(st.session_state['historico']):
-        st.info(acao)
-        
-    # --- GERADOR DE RELATÓRIO DO RODAPÉ (DISCRETO E COMPACTO) ---
-    st.write("---")
