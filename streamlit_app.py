@@ -6,19 +6,25 @@ import random
 # Configuração da página do Streamlit com estilo Dark/Cyberpunk ORIGINAL
 st.set_page_config(page_title="Duck Hunter - Auto Bot", page_icon="🦆", layout="wide")
 
-# Estilização visual ORIGINAL (Tema Escuro e Verde Neon)
+# Estilização visual ORIGINAL + Comando para esconder a faixa branca do topo
 st.markdown("""
     <style>
     .stApp { background-color: #0b0f19; color: #ffffff; }
     h1 { color: #00ffcc !important; text-align: center; font-family: 'Courier New', monospace; }
     .status-box { background-color: #161f30; padding: 20px; border-radius: 10px; border: 1px solid #00ffcc; }
+    
+    /* COMANDO OCULTO: Remove a barra branca do topo e o menu do Streamlit */
+    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    div[data-testid="stDecoration"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🦆 DUCK HUNTER — AUTO BOT V1")
 st.write("### 🏹 Caçador de Oportunidades em Modo Simulado (Grátis)")
 
-# INICIALIZAÇÃO BLINDADA: Adicionada variável oculta para rastrear o preço de compra real do trade
+# INICIALIZAÇÃO BLINDADA
 if 'saldo_usdt' not in st.session_state:
     st.session_state['saldo_usdt'] = 10000.0
 if 'saldo_btc' not in st.session_state:
@@ -47,7 +53,7 @@ st.sidebar.header("🕹️ PAINEL DE CONTROLE")
 config_queda = st.sidebar.slider("Comprar se cair (%)", 0.5, 5.0, 1.5, step=0.1)
 config_lucro = st.sidebar.slider("Vender se subir (%)", 0.5, 10.0, 2.0, step=0.1)
 
-# CONFIGURAÇÃO DE CONSULTORIA OCULTA: Trava automática fixada em 2.0% para proteção patrimonial
+# CONFIGURAÇÃO DE GESTÃO DE RISCO OCULTA
 STOP_LOSS_PERC = 2.0
 
 if st.sidebar.button("⚡ LIGAR / DESLIGAR ROBÔ"):
@@ -77,14 +83,14 @@ def escanear_solana_whales_oculto():
 if st.session_state['bot_ativo']:
     st.success("🤖 O DUCK BOT ESTÁ RODANDO E CAÇANDO PADRÕES AGORA...")
     
-    # 1. Scanner On-chain oculto (Módulo Solana)
+    # 1. Scanner On-chain oculto
     alerta_solana = escanear_solana_whales_oculto()
     if alerta_solana:
         st.session_state['historico'].append(alerta_solana)
         st.toast("🐋 Movimentação de Baleia interceptada on-chain!")
 
-    # 2. Verificação de Stop Loss Oculta (Se estiver posicionado em BTC, checa se caiu demais)
-    if st.session_state['saldo_btc'] > 0:
+    # 2. Verificação de Stop Loss Oculta (Modificada para evitar a divisão por zero)
+    if st.session_state['saldo_btc'] > 0 and st.session_state['preco_compra_atual'] > 0:
         preco_entrada = st.session_state['preco_compra_atual']
         queda_real = ((preco_atual - preco_entrada) / preco_entrada) * 100
         
@@ -100,11 +106,11 @@ if st.session_state['bot_ativo']:
     gatilho = random.choice(['nada', 'nada', 'comprar', 'vender'])
     
     if gatilho == 'comprar' and st.session_state['saldo_usdt'] > 100:
-        st.session_state['preco_compra_atual'] = preco_atual  # Salva o preço que comprou para o Stop Loss checar depois
-        quantidade_comprar = st.session_state['saldo_usdt'] / preco_atual
+        st.session_state['preco_compra_atual'] = preco_atual if preco_atual > 0 else 64000.0  # Proteção extra
+        quantidade_comprar = st.session_state['saldo_usdt'] / st.session_state['preco_compra_atual']
         st.session_state['saldo_btc'] += quantidade_comprar
         st.session_state['saldo_usdt'] = 0.0
-        st.session_state['historico'].append(f"🛒 COMPRA AUTOMÁTICA: Adquiriu {quantidade_comprar:.4f} BTC ao preço de ${preco_atual:,.2f}")
+        st.session_state['historico'].append(f"🛒 COMPRA AUTOMÁTICA: Adquiriu {quantidade_comprar:.4f} BTC ao preço de ${st.session_state['preco_compra_atual']:,.2f}")
         st.toast("🎯 Oportunidade detectada! Compra executada.")
         
     elif gatilho == 'vender' and st.session_state['saldo_btc'] > 0:
