@@ -9,7 +9,7 @@ from supabase import create_client, Client
 # Configuração de tela mobile centrada de alta fidelidade
 st.set_page_config(page_title="Duck Hunter - Ultimate Core", page_icon="🦆", layout="centered")
 
-# Estilização visual Corrigida (Contraste Premium, Sem barras e Mobile Friendly)
+# Estilização visual Premium (Fundo escuro, Sem barras e Botão Dinâmico Mutante)
 st.markdown("""
     <style>
     .stApp { background-color: #0b0f19; color: #ffffff; }
@@ -29,24 +29,11 @@ st.markdown("""
     .metric-value { font-size: 18px; color: #ffffff; font-weight: bold; margin-top: 5px; }
     .metric-price { font-size: 18px; color: #ffcc00; font-weight: bold; margin-top: 5px; }
     
-    /* Estilização corrigida para as caixas do Histórico */
+    /* Estilização das caixas do Histórico */
     .stAlert { background-color: #161f30 !important; border: 1px solid #1e293b !important; color: #ffffff !important; }
     .stAlert p { color: #ffffff !important; font-weight: 500; }
     
-    /* Botão Principal de Ativação */
-    div.stButton > button {
-        width: 100% !important;
-        background-color: #161f30 !important;
-        color: #00ffcc !important;
-        border: 1px solid #00ffcc !important;
-        font-weight: bold !important;
-        padding: 10px !important;
-        font-size: 15px !important;
-        border-radius: 6px !important;
-        margin-bottom: 15px !important;
-    }
-    
-    /* Botão de Download Otimizado no Topo */
+    /* Botão de Download Otimizado */
     div[data-testid="stDownloadButton"] > button {
         width: 100% !important;
         background-color: #111827 !important;
@@ -64,7 +51,7 @@ st.markdown("""
 st.markdown('<div class="main-title">🦆 DUCK HUNTER</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">🏹 Central Privada de Inteligência e Automação Financeira</div>', unsafe_allow_html=True)
 
-# Inicialização padrão de segurança em memória local
+# Inicialização segura de variáveis na memória local
 if 'saldo_usdt' not in st.session_state: st.session_state['saldo_usdt'] = 10000.0
 if 'saldo_btc' not in st.session_state: st.session_state['saldo_btc'] = 0.0
 if 'preco_compra_atual' not in st.session_state: st.session_state['preco_compra_atual'] = 0.0
@@ -81,17 +68,16 @@ def conectar_banco_silencioso():
             res = supabase.table("duck_memory").select("*").eq("id", 1).execute()
             if len(res.data) > 0:
                 dados = res.data[0]
-                st.session_state['saldo_usdt'] = float(dados['saldo_usdt'])
-                st.session_state['saldo_btc'] = float(dados['saldo_btc'])
-                st.session_state['preco_compra_atual'] = float(dados['preco_compra'])
-                st.session_state['historico'] = dados['historico_logs']
+                st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', st.session_state['saldo_usdt']))
+                st.session_state['saldo_btc'] = float(dados.get('saldo_btc', st.session_state['saldo_btc']))
+                st.session_state['preco_compra_atual'] = float(dados.get('preco_compra', st.session_state['preco_compra_atual']))
+                st.session_state['historico'] = dados.get('historico_logs', st.session_state['historico'])
             return supabase
     except: pass
     return None
 
 db_client = conectar_banco_silencioso()
 
-# BLINDAGEM DE MEMÓRIA
 def salvar_progresso_na_nuvem():
     if db_client:
         try:
@@ -104,12 +90,38 @@ def salvar_progresso_na_nuvem():
             }).eq("id", 1).execute()
         except: pass
 
-# --- BOTÃO OPERACIONAL ---
-if st.button("⚡ LIGAR / DESLIGAR ROBÔ"):
-    st.session_state['bot_ativo'] = not st.session_state['bot_ativo']
+# --- ESTILIZAÇÃO DINÂMICA DO BOTÃO MUTANTE (VERDE/VERMELHO) ---
+if st.session_state['bot_ativo']:
+    cor_botao = "#00ffcc"
+    texto_botao = "🟢 RADAR CAÇANDO (CLIQUE PARA PAUSAR)"
+else:
+    cor_botao = "#ff3366"
+    texto_botao = "❌ RADAR DESATIVADO (CLIQUE PARA LIGAR)"
 
-# Conexão pública com a Binance
-@st.cache_data(ttl=5) 
+st.markdown(f"""
+    <style>
+    div.stButton > button {{
+        width: 100% !important;
+        background-color: #111827 !important;
+        color: {cor_botao} !important;
+        border: 2px solid {cor_botao} !important;
+        font-weight: bold !important;
+        padding: 12px !important;
+        font-size: 15px !important;
+        border-radius: 6px !important;
+        margin-bottom: 15px !important;
+        box-shadow: 0px 0px 10px {cor_botao}33 !important;
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
+# --- EXECUÇÃO DO BOTÃO OPERACIONAL ---
+if st.button(texto_botao):
+    st.session_state['bot_ativo'] = not st.session_state['bot_ativo']
+    st.rerun()
+
+# Conexão pública com a Binance em Tempo Real
+@st.cache_data(ttl=3) 
 def analisar_mercado_real():
     try:
         exchange = ccxt.binance()
@@ -204,13 +216,3 @@ if st.session_state['bot_ativo']:
         
     elif gatilho == 'vender' and st.session_state['saldo_btc'] > 0:
         st.session_state['saldo_usdt'] = st.session_state['saldo_btc'] * preco_atual
-        st.session_state['saldo_btc'] = 0.0
-        st.session_state['preco_compra_atual'] = 0.0
-        st.session_state['historico'].append(f"💰 [{timestamp_atual}] VENDA: Liquidou BTC a ${preco_atual:,.2f} com lucro! [Filtro Tempo IA: {config_lucro}%]")
-        st.toast("💵 Venda executada.")
-        salvar_progresso_na_nuvem()
-else:
-    st.warning("💤 Robô pausado. Clique no botão acima para iniciar a caça.")
-
-# Exibição do Histórico Original Limpo
-st.write("### 📜 Histórico de Caça")
