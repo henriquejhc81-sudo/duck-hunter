@@ -7,44 +7,50 @@ from streamlit_autorefresh import st_autorefresh
 import numpy as np
 import io
 
-# 1. Configuração de Página Ultra-Wide e Ocultação de Menus/Sidebar
+# 1. Configuração de Página Ultra-Wide e Remoção Total de Margens Nativas
 st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
+# CSS Avançado de Compressão Vertical para eliminar espaços e subir o layout
 st.html("""
     <style>
+    /* Zera margens do container nativo do Streamlit */
+    .block-container { padding-top: 0.5rem !important; padding-bottom: 0px !important; max-width: 98% !important; }
     .reportview-container { background: #0b0f19; color: #e2e8f0; }
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedSidebarMenu"] { display: none !important; }
     
-    /* Configuração do Grid de 4 Colunas */
+    /* Grid de 4 colunas com margem inferior reduzida */
     .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 10px;
+        gap: 10px;
+        margin-bottom: 5px;
     }
     .panel-card {
         background-color: #111622;
         border: 1px solid #1e2640;
-        padding: 10px 15px;
+        padding: 8px 12px;
         border-radius: 6px;
     }
-    .panel-label { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; }
-    .panel-value { font-size: 20px; font-weight: 700; color: #ffffff; margin-top: 2px; }
-    .panel-subvalue { font-size: 11px; color: #94a3b8; }
+    .panel-label { font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: bold; }
+    .panel-value { font-size: 19px; font-weight: 700; color: #ffffff; margin-top: 1px; }
+    .panel-subvalue { font-size: 10.5px; color: #94a3b8; }
     
-    /* Barra de Monitoramento Compacta */
+    /* Barra de Monitoramento Ultra-Compacta */
     .target-bar {
         background-color: #1a1510;
         border: 1px solid #b45309;
-        padding: 6px 12px;
+        padding: 4px 10px;
         border-radius: 4px;
         color: #f59e0b;
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 600;
         text-align: center;
     }
-    .graph-title { font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 2px; }
+    .graph-title { font-size: 10.5px; color: #94a3b8; font-weight: 600; margin-bottom: 1px; }
+    
+    /* Força botões de download a ficarem inline e pequenos */
+    div[data-testid="stDownloadButton"] { display: inline-block !important; margin-right: 5px !important; }
     </style>
 """)
 
@@ -130,7 +136,6 @@ def analisar_mercado_autonomo(par, base_p):
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
-        # Ajuste dinâmico automático com foco em Lucro Seguro
         rsi_c, rsi_v, stop, status = (30, 70, 1.8, "🛡️ Modo Proteção") if vola > 0.15 else (38, 62, 2.5, "🔥 Caça Lucro")
         
         gatilho = "AGUARDAR"
@@ -150,7 +155,7 @@ historicos_graficos = {"btc": [], "eth": [], "sol": []}
 msg_ia = "Iniciando varredura estratégica de mercado..."
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v4")
+    st_autorefresh(interval=4000, key="duck_loop_v5")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -159,7 +164,6 @@ if st.session_state.radar_ligado:
         historicos_graficos[m] = hist
         msg_ia = f"IA: {status} | Configuração Autônoma Stop Loss: -{sl}% Ativa"
         
-        # Lógica Comercial de Aporte Fracionado Automatizado
         if acao == "COMPRAR" and st.session_state.saldo_usdt >= 300:
             aloc = st.session_state.saldo_usdt * 0.20
             st.session_state.saldo_usdt -= aloc
@@ -184,9 +188,9 @@ else:
 # -------------------------------------------------------------------
 # Renderização da Interface Visual Consolidada (Viewport Fixa)
 # -------------------------------------------------------------------
-c_tit, c_tog, c_bar = st.columns([2, 1.8, 6.2])
+c_tit, c_tog, c_bar = st.columns([1.8, 1.2, 7.0])
 with c_tit:
-    st.html('<div style="font-size: 22px; font-weight: 800; color: #f59e0b; padding-top: 3px;">🦆 DUCK HUNTER</div>')
+    st.html('<div style="font-size: 20px; font-weight: 800; color: #f59e0b; padding-top: 1px; margin-bottom: 0px;">🦆 DUCK HUNTER</div>')
 with c_tog:
     ant = st.session_state.radar_ligado
     lbl = "🟢 RADAR ATIVO" if st.session_state.radar_ligado else "🔴 ADORMECIDO"
@@ -198,7 +202,7 @@ with c_tog:
 with c_bar:
     st.html(f'<div class="target-bar">⚡ SYSTEM INTELLIGENCE: {msg_ia}</div>')
 
-# Grid Inline de Balanço Global Sem Formatações Conflitantes de Chaves
+# Grid Inline de Balanço Global
 patr = st.session_state.saldo_usdt + sum(st.session_state[f"saldo_{m}"] * precos_reais[m] for m in ["btc", "eth", "sol"])
 
 c_m1, c_m2, c_m3, c_m4 = st.columns(4)
@@ -211,32 +215,32 @@ with c_m3:
 with c_m4:
     st.html(f'<div class="panel-card"><div class="panel-label">POSIÇÃO SOLANA</div><div class="panel-value">{st.session_state.saldo_sol:.2f} SOL</div><div class="panel-subvalue">Pm: ${st.session_state.preco_compra_sol:,.2f} | Pr: ${precos_reais["sol"]:,.2f}</div></div>')
 
-# Seção de Gráficos com Títulos e Legendas Plenamente Restaurados
-st.write("")
-st.markdown("<p style='font-size: 13px; font-weight: bold; margin-bottom: 2px; margin-top: 0px;'>📊 Monitoramento de Mercado Real-Time (1m)</p>", unsafe_allow_html=True)
+# Seção de Gráficos Otimizada e Compactada
+st.markdown("<p style='font-size: 11.5px; font-weight: bold; margin-bottom: 1px; margin-top: 2px;'>📊 Monitoramento de Mercado Real-Time (1m)</p>", unsafe_allow_html=True)
 
 g1, g2, g3 = st.columns(3)
 with g1:
     st.markdown('<div class="graph-title">📈 Histórico BTC/USDT</div>', unsafe_allow_html=True)
-    st.line_chart(pd.DataFrame(historicos_graficos["btc"]), height=110, use_container_width=True)
+    st.line_chart(pd.DataFrame(historicos_graficos["btc"]), height=95, use_container_width=True)
 with g2:
     st.markdown('<div class="graph-title">📈 Histórico ETH/USDT</div>', unsafe_allow_html=True)
-    st.line_chart(pd.DataFrame(historicos_graficos["eth"]), height=110, use_container_width=True)
+    st.line_chart(pd.DataFrame(historicos_graficos["eth"]), height=95, use_container_width=True)
 with g3:
     st.markdown('<div class="graph-title">📈 Histórico SOL/USDT</div>', unsafe_allow_html=True)
-    st.line_chart(pd.DataFrame(historicos_graficos["sol"]), height=110, use_container_width=True)
+    st.line_chart(pd.DataFrame(historicos_graficos["sol"]), height=95, use_container_width=True)
 
-# Módulo Compacto de Extração de Dados e Terminal
+# Módulo Inline de Extração de Dados e Terminal (Alinhados horizontalmente)
 if st.session_state.historico_logs:
     df_logs = pd.DataFrame({"Auditoria": st.session_state.historico_logs})
-    col_e1, col_e2, _ = st.columns([2, 2, 6])
     buf = io.StringIO()
     df_logs.to_csv(buf, index=False, sep=';', encoding='utf-8-sig')
-    with col_e1: st.download_button(label="📥 Baixar CSV", data=buf.getvalue(), file_name="auditoria_duck.csv", mime="text/csv")
-    with col_e2: st.download_button(label="📄 Baixar TXT", data=buf.getvalue(), file_name="relatorio_duck.txt", mime="text/plain")
+    
+    # Renderização inline compacta dos botões antes do log
+    st.download_button(label="📥 Baixar CSV", data=buf.getvalue(), file_name="auditoria_duck.csv", mime="text/csv")
+    st.download_button(label="📄 Baixar TXT", data=buf.getvalue(), file_name="relatorio_duck.txt", mime="text/plain")
 
 with st.container():
-    for log in st.session_state.historico_logs[:8]:
+    for log in st.session_state.historico_logs[:6]:
         if "[COMPRA" in log: st.success(log)
         elif "[LUCRO" in log: st.info(log)
         else: st.code(log)
