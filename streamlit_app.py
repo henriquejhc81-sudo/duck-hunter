@@ -10,7 +10,7 @@ import io
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
 st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Premium Terminal Quantum - Margem do topo aumentada para não cortar
+# CSS Premium Terminal Quantum - Sem Ícone Superior e Margens Alinhadas
 st.html("""
     <style>
     .block-container { 
@@ -122,7 +122,7 @@ def carregar_estado_banco():
         try:
             response = supabase.table("duck_memory").select("*").eq("id", 1).execute()
             if response.data:
-                dados = response.data
+                dados = response.data[0]
                 return {
                     "radar_ligado": dados.get("radar_ligado", False),
                     "saldo_usdt": float(dados.get("saldo_usdt", 10000.0)),
@@ -151,6 +151,10 @@ def salvar_estado_banco():
         try: supabase.table("duck_memory").upsert(payload).execute()
         except: pass
 
+def alternar_radar_callback():
+    st.session_state.radar_ligado = st.session_state.toggle_chave
+    salvar_estado_banco()
+
 if "inicializado" not in st.session_state:
     for k, v in carregar_estado_banco().items(): st.session_state[k] = v
     st.session_state["inicializado"] = True
@@ -172,7 +176,7 @@ def calcular_rsi(precos, periodo=14):
 def analisar_mercado_autonomo(par, base_p):
     try:
         candles = exchange.fetch_ohlcv(par, timeframe='1m', limit=30)
-        fechamentos = [c for c in candles]
+        fechamentos = [c[4] for c in candles] # Coleta estrita do preço de fechamento
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
@@ -192,13 +196,12 @@ def analisar_mercado_autonomo(par, base_p):
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v15_final")
+    st_autorefresh(interval=4000, key="duck_loop_v16_final")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
         pr, acao, rsi, sl, status = analisar_mercado_autonomo(par, base)
         precos_reais[m] = pr
-        # Altera dinamicamente para indicar o status de caça ativa
         msg_ia = f"🦅 CAÇANDO ATIVOS INTEGRADOS // {status} // TRAILING STOP: -{sl}%"
         
         if acao == "COMPRAR" and st.session_state.saldo_usdt >= 300:
@@ -217,7 +220,6 @@ if st.session_state.radar_ligado:
             st.session_state.historico_logs.insert(0, f"💰 [{t_atual}] [PROFIT]: {m.upper()} liquidado | Lucro: +${lucro:,.2f}")
             salvar_estado_banco()
 else:
-    # Estado limpo solicitado quando o radar estiver desligado
     msg_ia = "RADAR EM STANDBY // MOTOR INTEGRADO"
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
         try:
@@ -233,13 +235,14 @@ c_tit, c_tog, c_bar = st.columns([2.0, 1.4, 6.6])
 with c_tit:
     st.html('<div class="brand-header">DUCK HUNTER</div>')
 with c_tog:
-    ant = st.session_state.radar_ligado
-    lbl = "🟢 SYS_ON" if st.session_state.radar_ligado else "🔴 SYS_STDBY"
-    radar = st.toggle(lbl, value=st.session_state.radar_ligado, label_visibility="collapsed")
-    if ant != radar:
-        st.session_state.radar_ligado = radar
-        salvar_estado_banco()
-        st.rerun()
+    # Vinculado ao callback limpo sem st.rerun redundante para evitar travamentos
+    st.toggle(
+        "Status", 
+        value=st.session_state.radar_ligado, 
+        key="toggle_chave", 
+        label_visibility="collapsed",
+        on_change=alternar_radar_callback
+    )
 with c_bar:
     st.html(f'<div class="target-bar">⚡ QUANTUM ENGINE MATRIX // {msg_ia}</div>')
 
@@ -265,7 +268,7 @@ st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-tr
 
 df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state.historico_logs if st.session_state.historico_logs else ["Nenhum registro ainda."]})
 
-# Grid frontalizado
+# Grid frontalizado das caixas de exportação
 c_sel, c_btn, _ = st.columns([4.0, 3.0, 3.0])
 
 with c_sel:
@@ -301,7 +304,7 @@ else:
 with c_btn:
     st.download_button(label=label_btn, data=buf_dados.getvalue(), file_name=nome_arquivo, mime=tipo_mime)
 
-# Terminal Real-Time com o novo título de texto limpo solicitado
+# Terminal Real-Time sem o texto estático interno antigo
 st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; margin-bottom: 2px;'>DUCK HUNTER CAÇADOR DE OPORTUNIDADES INICIALIZADO</p>", unsafe_allow_html=True)
 
 terminal_content = ""
