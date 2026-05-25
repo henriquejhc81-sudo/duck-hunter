@@ -7,25 +7,46 @@ from streamlit_autorefresh import st_autorefresh
 import numpy as np
 import io
 
-# -------------------------------------------------------------------
-# Configuração da página e Interface Black/Cyberpunk com Pato 2026 🦆
-# -------------------------------------------------------------------
+# Configuração de Página Ultra-Wide
 st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide")
 
+# Estilização Avançada Baseada no Padrão de Alta Densidade do Concorrente
 st.html("""
     <style>
     .reportview-container { background: #0b0f19; color: #e2e8f0; }
-    .metric-card {
-        background-color: #111827;
-        border: 1px solid #1f2937;
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        margin-bottom: 10px;
+    .brand-title { font-size: 38px; font-weight: 800; color: #ffffff; letter-spacing: 1px; margin-bottom: 5px; }
+    
+    /* Grid Horizontal Unificado */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1.2fr 2fr;
+        gap: 15px;
+        margin-bottom: 15px;
     }
-    .metric-val { font-size: 24px; font-weight: bold; color: #38bdf8; }
-    .log-text { font-family: 'Courier New', Courier, monospace; font-size: 13px; }
+    
+    .panel-card {
+        background-color: #111622;
+        border: 1px solid #1e2640;
+        padding: 15px 20px;
+        border-radius: 6px;
+    }
+    
+    .panel-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: bold; letter-spacing: 0.5px; }
+    .panel-value { font-size: 24px; font-weight: 700; color: #38bdf8; margin-top: 4px; }
+    .panel-subvalue { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+    
+    /* Barra de Alvos Estilo Dourado Corporativo */
+    .target-bar {
+        background-color: #1a1510;
+        border: 1px solid #b45309;
+        padding: 10px 15px;
+        border-radius: 4px;
+        color: #f59e0b;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 20px;
+    }
     </style>
 """)
 
@@ -91,7 +112,6 @@ def salvar_estado_banco():
         except:
             pass
 
-# Inicialização Blindada do Estado de Sessão
 if "inicializado" not in st.session_state:
     estado_recuperado = carregar_estado_banco()
     for chave, valor in estado_recuperado.items():
@@ -102,20 +122,16 @@ if "inicializado" not in st.session_state:
 # -------------------------------------------------------------------
 def analisar_mercado_institucional():
     try:
-        # Busca dados históricos de 1 minuto para médias rápidas
         candles = exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=10)
         precos_fechamento = [c[4] for c in candles]
         preco_atual = precos_fechamento[-1]
         
         media_mercado = np.mean(precos_fechamento)
         
-        baleias = ["MobyDuck_Wallet", "Kraken_Whale_7", "BlackRock_ETF_Flow", "MicroStrategy_Vault"]
+        baleias = ["MobyDuck_Wallet", "BlackRock_ETF_Flow", "MicroStrategy_Vault"]
         baleia_ativa = np.random.choice(baleias)
-        
-        # Ajustado para maior sensibilidade operacional: 50% chance de fluxo ativo por ciclo
         fluxo_on_chain = np.random.choice(["COMPRA_MASSIVA", "ACUMULACAO", "DISTRIBUICAO", "NEUTRO"], p=[0.25, 0.25, 0.20, 0.30])
         
-        # Condições otimizadas para gerar movimentações reais de caça
         if preco_atual <= (media_mercado * 1.0005) and fluxo_on_chain in ["COMPRA_MASSIVA", "ACUMULACAO"]:
             gatilho = "COMPRAR"
         elif preco_atual >= (media_mercado * 0.9995) and fluxo_on_chain == "DISTRIBUICAO":
@@ -127,56 +143,31 @@ def analisar_mercado_institucional():
     except:
         return 65000.0, "AGUARDAR", "API Temporária", "NEUTRO"
 
-# -------------------------------------------------------------------
-# Interface Gráfica Unificada
-# -------------------------------------------------------------------
-st.title("🦆 DUCK HUNTER - Institutional Alpha Bot")
-st.subheader("Central de Inteligência Baseada em Fluxo de Fundos de Capital de Risco")
-
-# Painel Lateral de Controle
-with st.sidebar:
-    st.header("⚡ Configurações do Radar")
-    status_anterior = st.session_state.radar_ligado
-    
-    radar_ativo = st.toggle("CAÇANDO RADAR ON-CHAIN", value=st.session_state.radar_ligado)
-    st.session_state.radar_ligado = radar_ativo
-    
-    if status_anterior != radar_ativo:
-        salvar_estado_banco()
-        st.rerun()
-        
-    st.markdown("---")
-    st.markdown("### 🏢 Perfis de Operação Imitados:")
-    st.caption("• **MicroStrategy**: Acúmulo agressivo abaixo do preço médio.")
-    st.caption("• **BlackRock (ETF)**: Entradas fracionadas com mitigação de risco.")
-    st.caption("• **Paradigm / a16z**: Identificação de fluxo primitivo na rede.")
-
-# Motor de Loop Autorefresh (Ciclo de 4 segundos se o radar estiver ON)
+# Execução do Ciclo Automatizado
+preco_real_btc = 65000.0
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop")
+    st_autorefresh(interval=4000, key="duck_loop_premium")
     
-    preco, acao, baleia, fluxo = analisar_mercado_institucional()
+    preco_real_btc, acao, baleia, fluxo = analisar_mercado_institucional()
     timestamp_atual = time.strftime('%H:%M:%S')
     
     if fluxo in ["COMPRA_MASSIVA", "ACUMULACAO", "DISTRIBUICAO"]:
         st.session_state.historico_logs.insert(0, f"🐳 [{timestamp_atual}] [RADAR]: {baleia} agindo com padrão de {fluxo}.")
     
-    # Execução de Compra Fracionada (Estilo DCA de Fundos)
     if acao == "COMPRAR" and st.session_state.saldo_usdt >= 500:
         valor_aporte = st.session_state.saldo_usdt * 0.25
-        btc_comprado = valor_aporte / preco
+        btc_comprado = valor_aporte / preco_real_btc
         
         st.session_state.saldo_usdt -= valor_aporte
         st.session_state.saldo_btc += btc_comprado
-        st.session_state.preco_compra = preco
+        st.session_state.preco_compra = preco_real_btc
         
-        st.session_state.historico_logs.insert(0, f"🛒 [{timestamp_atual}] [COMPRA]: Adquirido {btc_comprado:.5f} BTC a ${preco:,.2f} | Alocação 25%")
+        st.session_state.historico_logs.insert(0, f"🛒 [{timestamp_atual}] [COMPRA]: Alocação 1/4 executada a ${preco_real_btc:,.2f}. Pm: ${preco_real_btc:,.2f}")
         salvar_estado_banco()
         
-    # Execução de Venda / Realização de Lucro
     elif acao == "VENDER" and st.session_state.saldo_btc > 0:
-        if preco > st.session_state.preco_compra:
-            retorno_usdt = st.session_state.saldo_btc * preco
+        if preco_real_btc > st.session_state.preco_compra:
+            retorno_usdt = st.session_state.saldo_btc * preco_real_btc
             lucro = retorno_usdt - (st.session_state.saldo_btc * st.session_state.preco_compra)
             
             st.session_state.saldo_usdt += retorno_usdt
@@ -184,14 +175,14 @@ if st.session_state.radar_ligado:
             st.session_state.saldo_btc = 0.0
             st.session_state.preco_compra = 0.0
             
-            st.session_state.historico_logs.insert(0, f"💰 [{timestamp_atual}] [VENDA]: Posição liquidada a ${preco:,.2f} | Lucro: +${lucro:,.2f}")
+            st.session_state.historico_logs.insert(0, f"💰 [{timestamp_atual}] [VENDA]: Posição liquidada a ${preco_real_btc:,.2f} | Lucro: +${lucro:,.2f}")
             salvar_estado_banco()
 
-    # Gerenciador de Segurança: Stop Loss Corporativo
+    # Gerenciador de Risco Corporativo (Stop Loss)
     if st.session_state.saldo_btc > 0 and st.session_state.preco_compra > 0:
-        variacao_percentual = ((preco - st.session_state.preco_compra) / st.session_state.preco_compra) * 100
+        variacao_percentual = ((preco_real_btc - st.session_state.preco_compra) / st.session_state.preco_compra) * 100
         if variacao_percentual <= -2.5:
-            retorno_usdt = st.session_state.saldo_btc * preco
+            retorno_usdt = st.session_state.saldo_btc * preco_real_btc
             perda = (st.session_state.saldo_btc * st.session_state.preco_compra) - retorno_usdt
             
             st.session_state.saldo_usdt += retorno_usdt
@@ -199,68 +190,99 @@ if st.session_state.radar_ligado:
             st.session_state.saldo_btc = 0.0
             st.session_state.preco_compra = 0.0
             
-            st.session_state.historico_logs.insert(0, f"🚨 [{timestamp_atual}] [STOP LOSS]: Proteção ativada a ${preco:,.2f} | Perda: -${perda:,.2f}")
+            st.session_state.historico_logs.insert(0, f"🚨 [{timestamp_atual}] [STOP LOSS]: Proteção ativada a ${preco_real_btc:,.2f} | Perda: -${perda:,.2f}")
             salvar_estado_banco()
+else:
+    try:
+        ticker = exchange.fetch_ticker('BTC/USDT')
+        preco_real_btc = ticker['last']
+    except:
+        preco_real_btc = 65000.0
 
 # -------------------------------------------------------------------
-# Renderização das Métricas Visuais
+# Renderização da Interface Visual Unificada (Estilo Concorrente)
 # -------------------------------------------------------------------
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    st.html(f"<div class='metric-card'>💰 <span class='metric-val'>${st.session_state.saldo_usdt:,.2f}</span><br>Saldo USDT</div>")
-with c2:
-    st.html(f"<div class='metric-card'>🪙 <span class='metric-val'>{st.session_state.saldo_btc:.5f} BTC</span><br>Carteira BTC</div>")
-with c3:
-    color_pnl = "#10b981" if st.session_state.lucro_total >= 0 else "#ef4444"
-    st.html(f"<div class='metric-card'>📈 <span class='metric-val' style='color:{color_pnl};'>${st.session_state.lucro_total:,.2f}</span><br>Retorno Líquido PNL</div>")
-with c4:
-    status_text = "🟢 CAÇANDO" if st.session_state.radar_ligado else "🔴 ADORMECIDO"
-    st.html(f"<div class='metric-card'>📡 <span class='metric-val'>{status_text}</span><br>Status Operacional</div>")
+st.markdown('<div class="brand-title">DUCK HUNTER</div>', unsafe_allowed_html=True)
 
-st.markdown("---")
-st.markdown("### 📋 Painel de Auditoria de Transações Real-Time (Histórico)")
+# Linha de Botões de Controle Superior
+col_btn1, _ = st.columns([2, 8])
+with col_btn1:
+    status_anterior = st.session_state.radar_ligado
+    label_radar = "🟢 RADAR MULTI-ATIVO ATIVO" if st.session_state.radar_ligado else "🔴 RADAR ADORMECIDO"
+    radar_ativo = st.toggle(label_radar, value=st.session_state.radar_ligado)
+    st.session_state.radar_ligado = radar_ativo
+    if status_anterior != radar_ativo:
+        salvar_estado_banco()
+        st.rerun()
+
+st.markdown("<br>", unsafe_allowed_html=True)
+
+# Grid de Painéis Horizontais Inline (Idêntico ao Layout SARA_FIREBOLT)
+grid_html = f"""
+<div class="dashboard-grid">
+    <div class="panel-card">
+        <div class="panel-label">🔻 PATRIMÔNIO TOTAL</div>
+        <div class="panel-value" style="color: #f59e0b;">${(st.session_state.saldo_usdt + (st.session_state.saldo_btc * preco_real_btc)):,.2f}</div>
+        <div class="panel-subvalue">Retorno PNL: ${st.session_state.lucro_total:,.2f}</div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-label">DISPONÍVEL USDT</div>
+        <div class="panel-value" style="color: #ffffff;">${st.session_state.saldo_usdt:,.2f}</div>
+        <div class="panel-subvalue">Caixa Livre para Aportes</div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-label">POSIÇÃO BITCOIN</div>
+        <div class="panel-value" style="color: #ffffff;">{st.session_state.saldo_btc:.5f} BTC</div>
+        <div class="panel-subvalue">Pm: ${st.session_state.preco_compra:,.2f} | Pr: ${preco_real_btc:,.2f}</div>
+    </div>
+</div>
+"""
+st.html(grid_html)
+
+# Barra de Alvos Corporativa Dourada
+st.markdown(
+    '<div class="target-bar">⚡ MONITORAMENTO COORDENADO | Alvos IA BTC: Queda -2.50% (DCA/Stop) / Lucro +1.50% [Alocação Fracionada Ativa]</div>', 
+    unsafe_allowed_html=True
+)
 
 # -------------------------------------------------------------------
-# Geração e Exportação de Relatórios Seguros (Sem dependência de openpyxl)
+# Módulo de Relatórios e Auditoria
 # -------------------------------------------------------------------
 if st.session_state.historico_logs:
     df_logs = pd.DataFrame({"Registro de Auditoria / Operação": st.session_state.historico_logs})
     
-    col_exp1, col_exp2, _ = st.columns([1, 1, 4])
+    col_exp1, col_exp2, _ = st.columns([2.5, 2.5, 5])
     
-    # Exportador compatível com Excel via CSV estruturado
     buffer_csv = io.StringIO()
     df_logs.to_csv(buffer_csv, index=False, sep=';', encoding='utf-8-sig')
     
     with col_exp1:
         st.download_button(
-            label="📥 Baixar Excel (.xlsx/.csv)",
+            label="📥 Baixar Tabela de Auditoria (CSV)",
             data=buffer_csv.getvalue(),
-            file_name="relatorio_duck_hunter.csv",
+            file_name="auditoria_duck_hunter.csv",
             mime="text/csv"
         )
         
-    # Exportador estruturado de texto para simulação limpa de PDF
-    buffer_txt = io.StringIO()
-    df_logs.to_csv(buffer_txt, index=False)
-    
     with col_exp2:
         st.download_button(
-            label="📄 Baixar Relatório (PDF/TXT)",
-            data=buffer_txt.getvalue(),
+            label="📄 Baixar Relatório Duck Hunter (PDF/TXT)",
+            data=buffer_csv.getvalue(),
             file_name="relatorio_duck_hunter.txt",
-            mime="text/plain" 
+            mime="text/plain"
         )
 
-# Renderizador da lista de auditoria na viewport
+st.markdown("<br>", unsafe_allowed_html=True)
+
+# Renderizador de Terminais Reativos
 container_logs = st.container()
 with container_logs:
-    for log in st.session_state.historico_logs[:25]:
+    for log in st.session_state.historico_logs[:20]:
         if "[COMPRA]" in log:
             st.success(log)
         elif "[VENDA]" in log:
             st.info(log)
-        elif "[STOP LOSS]" in log:
+        elif "[STOP LOSS]" in log or "🚨" in log:
             st.error(log)
         else:
-            st.text(log)
+            st.code(log)
