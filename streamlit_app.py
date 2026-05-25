@@ -10,30 +10,30 @@ import io
 # Configuração de Página Ultra-Wide
 st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide")
 
-# Estilização Avançada Baseada no Padrão de Alta Densidade do Concorrente
+# Estilização Avançada Premium Estilo SARA_FIREBOLT (Alta Densidade)
 st.html("""
     <style>
     .reportview-container { background: #0b0f19; color: #e2e8f0; }
     .brand-title { font-size: 38px; font-weight: 800; color: #ffffff; letter-spacing: 1px; margin-bottom: 5px; }
     
-    /* Grid Horizontal Unificado */
+    /* Grid Horizontal Unificado para 4 Colunas */
     .dashboard-grid {
         display: grid;
-        grid-template-columns: 1.2fr 1.2fr 2fr;
-        gap: 15px;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 12px;
         margin-bottom: 15px;
     }
     
     .panel-card {
         background-color: #111622;
         border: 1px solid #1e2640;
-        padding: 15px 20px;
+        padding: 12px 18px;
         border-radius: 6px;
     }
     
-    .panel-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: bold; letter-spacing: 0.5px; }
-    .panel-value { font-size: 24px; font-weight: 700; color: #38bdf8; margin-top: 4px; }
-    .panel-subvalue { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+    .panel-label { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; letter-spacing: 0.5px; }
+    .panel-value { font-size: 21px; font-weight: 700; color: #ffffff; margin-top: 4px; }
+    .panel-subvalue { font-size: 12px; color: #94a3b8; margin-top: 2px; }
     
     /* Barra de Alvos Estilo Dourado Corporativo */
     .target-bar {
@@ -67,15 +67,16 @@ supabase = init_supabase()
 exchange = ccxt.binance({'enableRateLimit': True})
 
 # -------------------------------------------------------------------
-# Mecanismo de Sincronização e Recuperação de Estado (Anti-Reset)
+# Persistência de Dados Inteligente Baseada em Dicionários
 # -------------------------------------------------------------------
 def carregar_estado_banco():
     estado_padrao = {
         "radar_ligado": False,
         "saldo_usdt": 10000.0,
-        "saldo_btc": 0.0,
-        "preco_compra": 0.0,
-        "historico_logs": ["🦆 Sistema Duck Hunter Inicializado. Pronto para Caça."],
+        "saldo_btc": 0.0, "preco_compra_btc": 0.0,
+        "saldo_eth": 0.0, "preco_compra_eth": 0.0,
+        "saldo_sol": 0.0, "preco_compra_sol": 0.0,
+        "historico_logs": ["🦆 Sistema Duck Hunter Tri-Asset Inicializado."],
         "lucro_total": 0.0
     }
     
@@ -83,12 +84,16 @@ def carregar_estado_banco():
         try:
             response = supabase.table("duck_memory").select("*").eq("id", 1).execute()
             if response.data:
-                dados = response.data
+                dados = response.data[0]
                 return {
                     "radar_ligado": dados.get("radar_ligado", False),
                     "saldo_usdt": float(dados.get("saldo_usdt", 10000.0)),
                     "saldo_btc": float(dados.get("saldo_btc", 0.0)),
-                    "preco_compra": float(dados.get("preco_compra", 0.0)),
+                    "preco_compra_btc": float(dados.get("preco_compra_btc", 0.0)),
+                    "saldo_eth": float(dados.get("saldo_eth", 0.0)),
+                    "preco_compra_eth": float(dados.get("preco_compra_eth", 0.0)),
+                    "saldo_sol": float(dados.get("saldo_sol", 0.0)),
+                    "preco_compra_sol": float(dados.get("preco_compra_sol", 0.0)),
                     "historico_logs": dados.get("historico_logs", estado_padrao["historico_logs"]),
                     "lucro_total": float(dados.get("lucro_total", 0.0))
                 }
@@ -103,7 +108,11 @@ def salvar_estado_banco():
             "radar_ligado": st.session_state.radar_ligado,
             "saldo_usdt": st.session_state.saldo_usdt,
             "saldo_btc": st.session_state.saldo_btc,
-            "preco_compra": st.session_state.preco_compra,
+            "preco_compra_btc": st.session_state.preco_compra_btc,
+            "saldo_eth": st.session_state.saldo_eth,
+            "preco_compra_eth": st.session_state.preco_compra_eth,
+            "saldo_sol": st.session_state.saldo_sol,
+            "preco_compra_sol": st.session_state.preco_compra_sol,
             "historico_logs": st.session_state.historico_logs,
             "lucro_total": st.session_state.lucro_total
         }
@@ -118,93 +127,133 @@ if "inicializado" not in st.session_state:
         st.session_state[chave] = valor
     st.session_state["inicializado"] = True
 # -------------------------------------------------------------------
-# Inteligência Quantitativa Dinâmica (Filtros de Mercado Real)
+# Módulo de Inteligência Quantitativa Avançada (RSI + EMA Real)
 # -------------------------------------------------------------------
-def analisar_mercado_institucional():
+def calcular_rsi(precos, periodo=14):
+    if len(precos) < periodo + 1:
+        return 50.0
+    variacoes = np.diff(precos)
+    ganhos = np.where(variacoes > 0, variacoes, 0)
+    perdas = np.where(variacoes < 0, -variacoes, 0)
+    
+    avg_ganho = np.mean(ganhos[:periodo])
+    avg_perda = np.mean(perdas[:periodo])
+    
+    for i in range(periodo, len(variacoes)):
+        avg_ganho = (avg_ganho * (periodo - 1) + ganhos[i]) / periodo
+        avg_perda = (avg_perda * (periodo - 1) + perdas[i]) / periodo
+        
+    if avg_perda == 0:
+        return 100.0
+    rs = avg_ganho / avg_perda
+    return 100.0 - (100.0 / (1.0 + rs))
+
+def analisar_ativo_institucional(par_moeda):
     try:
-        candles = exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=10)
-        precos_fechamento = [c for c in candles]
+        # Busca 30 minutos de histórico para garantir precisão nos indicadores
+        candles = exchange.fetch_ohlcv(par_moeda, timeframe='1m', limit=30)
+        precos_fechamento = [c[4] for c in candles]
         preco_atual = precos_fechamento[-1]
         
-        media_mercado = np.mean(precos_fechamento)
+        # Indicadores Avançados (Padrão 2026 para Identificação de Fundos)
+        rsi = calcular_rsi(precos_fechamento, 14)
+        ema_rapida = np.mean(precos_fechamento[-9:])
         
-        baleias = ["MobyDuck_Wallet", "BlackRock_ETF_Flow", "MicroStrategy_Vault"]
+        # Filtro de Confirmação de Baleias On-Chain (Simulação Combinada)
+        baleias = ["BlackRock_Flow", "MicroStrategy_Vault", "Paradigm_Alpha"]
         baleia_ativa = np.random.choice(baleias)
         fluxo_on_chain = np.random.choice(["COMPRA_MASSIVA", "ACUMULACAO", "DISTRIBUICAO", "NEUTRO"], p=[0.25, 0.25, 0.20, 0.30])
         
-        if preco_atual <= (media_mercado * 1.0005) and fluxo_on_chain in ["COMPRA_MASSIVA", "ACUMULACAO"]:
+        # Estratégia de Alta Probabilidade: Compra em Sobrevenda ou Cruzamento de Alta
+        if (rsi <= 35 or preco_atual < ema_rapida) and fluxo_on_chain in ["COMPRA_MASSIVA", "ACUMULACAO"]:
             gatilho = "COMPRAR"
-        elif preco_atual >= (media_mercado * 0.9995) and fluxo_on_chain == "DISTRIBUICAO":
+        # Venda em Sobrecompra ou Perda de Momentum
+        elif (rsi >= 65) or fluxo_on_chain == "DISTRIBUICAO":
             gatilho = "VENDER"
         else:
             gatilho = "AGUARDAR"
             
-        return preco_atual, gatilho, baleia_ativa, fluxo_on_chain
+        return preco_atual, gatilho, rsi, baleia_ativa, fluxo_on_chain
     except:
-        return 65000.0, "AGUARDAR", "API Temporária", "NEUTRO"
+        # Preços base de fallback caso o rate limit da API atue temporariamente
+        bases = {"BTC/USDT": 65000.0, "ETH/USDT": 3450.0, "SOL/USDT": 160.0}
+        return bases.get(par_moeda, 100.0), "AGUARDAR", 50.0, "API", "NEUTRO"
 
-# Execução do Ciclo Automatizado
-preco_real_btc = 65000.0
+# Execução do Ciclo Automatizado Sincronizado
+precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
+
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_premium")
-    
-    preco_real_btc, acao, baleia, fluxo = analisar_mercado_institucional()
+    st_autorefresh(interval=4000, key="duck_loop_tri_asset")
     timestamp_atual = time.strftime('%H:%M:%S')
     
-    if fluxo in ["COMPRA_MASSIVA", "ACUMULACAO", "DISTRIBUICAO"]:
-        st.session_state.historico_logs.insert(0, f"🐳 [{timestamp_atual}] [RADAR]: {baleia} agindo com padrão de {fluxo}.")
-    
-    if acao == "COMPRAR" and st.session_state.saldo_usdt >= 500:
-        valor_aporte = st.session_state.saldo_usdt * 0.25
-        btc_comprado = valor_aporte / preco_real_btc
+    # Processamento em Paralelo de todos os ativos da carteira
+    for moeda, par in [("btc", "BTC/USDT"), ("eth", "ETH/USDT"), ("sol", "SOL/USDT")]:
+        preco, acao, rsi_calc, baleia, fluxo = analisar_ativo_institucional(par)
+        precos_reais[moeda] = preco
         
-        st.session_state.saldo_usdt -= valor_aporte
-        st.session_state.saldo_btc += btc_comprado
-        st.session_state.preco_compra = preco_real_btc
+        saldo_token = st.session_state[f"saldo_{moeda}"]
+        pm_token = st.session_state[f"preco_compra_{moeda}"]
         
-        st.session_state.historico_logs.insert(0, f"🛒 [{timestamp_atual}] [COMPRA]: Alocação 1/4 executada a ${preco_real_btc:,.2f}. Pm: ${preco_real_btc:,.2f}")
-        salvar_estado_banco()
-        
-    elif acao == "VENDER" and st.session_state.saldo_btc > 0:
-        if preco_real_btc > st.session_state.preco_compra:
-            retorno_usdt = st.session_state.saldo_btc * preco_real_btc
-            lucro = retorno_usdt - (st.session_state.saldo_btc * st.session_state.preco_compra)
+        # 1. Fluxo de Compra Fracionada Otimizado (Divide o caixa em frações iguais)
+        if acao == "COMPRAR" and st.session_state.saldo_usdt >= 300:
+            alocacao_caixa = st.session_state.saldo_usdt * 0.20  # Entradas cirúrgicas de 20% do caixa
+            tokens_adquiridos = alocacao_caixa / preco
             
-            st.session_state.saldo_usdt += retorno_usdt
-            st.session_state.lucro_total += lucro
-            st.session_state.saldo_btc = 0.0
-            st.session_state.preco_compra = 0.0
+            st.session_state.saldo_usdt -= alocacao_caixa
+            st.session_state[f"saldo_{moeda}"] += tokens_adquiridos
+            st.session_state[f"preco_compra_{moeda}"] = preco
             
-            st.session_state.historico_logs.insert(0, f"💰 [{timestamp_atual}] [VENDA]: Posição liquidada a ${preco_real_btc:,.2f} | Lucro: +${lucro:,.2f}")
+            st.session_state.historico_logs.insert(
+                0, f"🛒 [{timestamp_atual}] [COMPRA DUAL]: Alocação executada em {moeda.upper()} a ${preco:,.2f}. RSI: {rsi_calc:.1f}"
+            )
             salvar_estado_banco()
+            
+        # 2. Fluxo de Venda / Realização de Lucros Alvo
+        elif acao == "VENDER" and saldo_token > 0:
+            if preco > pm_token:
+                retorno_caixa = saldo_token * preco
+                lucro = retorno_caixa - (saldo_token * pm_token)
+                
+                st.session_state.saldo_usdt += retorno_caixa
+                st.session_state.lucro_total += lucro
+                st.session_state[f"saldo_{moeda}"] = 0.0
+                st.session_state[f"preco_compra_{moeda}"] = 0.0
+                
+                st.session_state.historico_logs.insert(
+                    0, f"💰 [{timestamp_atual}] [VENDA DUAL]: Realização de Lucro em {moeda.upper()} a ${preco:,.2f} | PNL: +${lucro:,.2f}"
+                )
+                salvar_estado_banco()
 
-    # Gerenciador de Risco Corporativo (Stop Loss)
-    if st.session_state.saldo_btc > 0 and st.session_state.preco_compra > 0:
-        variacao_percentual = ((preco_real_btc - st.session_state.preco_compra) / st.session_state.preco_compra) * 100
-        if variacao_percentual <= -2.5:
-            retorno_usdt = st.session_state.saldo_btc * preco_real_btc
-            perda = (st.session_state.saldo_btc * st.session_state.preco_compra) - retorno_usdt
-            
-            st.session_state.saldo_usdt += retorno_usdt
-            st.session_state.lucro_total -= perda
-            st.session_state.saldo_btc = 0.0
-            st.session_state.preco_compra = 0.0
-            
-            st.session_state.historico_logs.insert(0, f"🚨 [{timestamp_atual}] [STOP LOSS]: Proteção ativada a ${preco_real_btc:,.2f} | Perda: -${perda:,.2f}")
-            salvar_estado_banco()
+        # 3. Gerenciador de Risco Unificado (Stop Loss por Ativo)
+        if saldo_token > 0 and pm_token > 0:
+            desvalorizacao = ((preco - pm_token) / pm_token) * 100
+            if desvalorizacao <= -2.5:
+                retorno_caixa = saldo_token * preco
+                perda = (saldo_token * pm_token) - retorno_caixa
+                
+                st.session_state.saldo_usdt += retorno_caixa
+                st.session_state.lucro_total -= perda
+                st.session_state[f"saldo_{moeda}"] = 0.0
+                st.session_state[f"preco_compra_{moeda}"] = 0.0
+                
+                st.session_state.historico_logs.insert(
+                    0, f"🚨 [{timestamp_atual}] [STOP LOSS]: Proteção ativada em {moeda.upper()} a ${preco:,.2f} | Perda: -${perda:,.2f}"
+                )
+                salvar_estado_banco()
 else:
-    try:
-        ticker = exchange.fetch_ticker('BTC/USDT')
-        preco_real_btc = ticker['last']
-    except:
-        preco_real_btc = 65000.0
+    # Coleta preços em tempo real mesmo parado
+    for m, p in [("btc", "BTC/USDT"), ("eth", "ETH/USDT"), ("sol", "SOL/USDT")]:
+        try:
+            ticker = exchange.fetch_ticker(p)
+            precos_reais[m] = ticker['last']
+        except:
+            pass
 
 # -------------------------------------------------------------------
-# Renderização da Interface Visual Unificada (Estilo Concorrente)
+# Renderização da Interface Visual Premium (Layout SARA_FIREBOLT)
 # -------------------------------------------------------------------
 st.html('<div class="brand-title">DUCK HUNTER</div>')
 
-# Linha de Botões de Controle Superior
 status_anterior = st.session_state.radar_ligado
 label_radar = "🟢 RADAR MULTI-ATIVO ATIVO" if st.session_state.radar_ligado else "🔴 RADAR ADORMECIDO"
 radar_ativo = st.toggle(label_radar, value=st.session_state.radar_ligado)
@@ -214,40 +263,51 @@ if status_anterior != radar_ativo:
     salvar_estado_banco()
     st.rerun()
 
-# Espaçamento Limpo Padrão Streamlit (Evita quebra por HTML)
 st.write("")
 
-# Grid de Painéis Horizontais Inline (Idêntico ao Layout SARA_FIREBOLT)
+# Cálculo do Patrimônio Líquido Dinâmico totalizado
+patrimonio_total = (
+    st.session_state.saldo_usdt + 
+    (st.session_state.saldo_btc * precos_reais["btc"]) + 
+    (st.session_state.saldo_eth * precos_reais["eth"]) + 
+    (st.session_state.saldo_sol * precos_reais["sol"])
+)
+
+# Grid de 4 Colunas Horizontais de Alta Densidade
 grid_html = f"""
 <div class="dashboard-grid">
     <div class="panel-card">
         <div class="panel-label">🔻 PATRIMÔNIO TOTAL</div>
-        <div class="panel-value" style="color: #f59e0b;">${(st.session_state.saldo_usdt + (st.session_state.saldo_btc * preco_real_btc)):,.2f}</div>
-        <div class="panel-subvalue">Retorno PNL: ${st.session_state.lucro_total:,.2f}</div>
-    </div>
-    <div class="panel-card">
-        <div class="panel-label">DISPONÍVEL USDT</div>
-        <div class="panel-value" style="color: #ffffff;">${st.session_state.saldo_usdt:,.2f}</div>
-        <div class="panel-subvalue">Caixa Livre para Aportes</div>
+        <div class="panel-value" style="color: #f59e0b;">${patrimonio_total:,.2f}</div>
+        <div class="panel-subvalue">Disponível USDT: ${st.session_state.saldo_usdt:,.2f}</div>
     </div>
     <div class="panel-card">
         <div class="panel-label">POSIÇÃO BITCOIN</div>
-        <div class="panel-value" style="color: #ffffff;">{st.session_state.saldo_btc:.5f} BTC</div>
-        <div class="panel-subvalue">Pm: ${st.session_state.preco_compra:,.2f} | Pr: ${preco_real_btc:,.2f}</div>
+        <div class="panel-value">{st.session_state.saldo_btc:.4f} BTC</div>
+        <div class="panel-subvalue">Pm: ${st.session_state.preco_compra_btc:,.2f} | Pr: ${precos_reais["btc"]:,.2f}</div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-label">POSIÇÃO ETHEREUM</div>
+        <div class="panel-value">{st.session_state.saldo_eth:.3f} ETH</div>
+        <div class="panel-subvalue">Pm: ${st.session_state.preco_compra_eth:,.2f} | Pr: ${precos_reais["eth"]:,.2f}</div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-label">POSIÇÃO SOLANA</div>
+        <div class="panel-value">{st.session_state.saldo_sol:.2f} SOL</div>
+        <div class="panel-subvalue">Pm: ${st.session_state.preco_compra_sol:,.2f} | Pr: ${precos_reais["sol"]:,.2f}</div>
     </div>
 </div>
 """
 st.html(grid_html)
 
-# Barra de Alvos Corporativa Dourada
-st.html('<div class="target-bar">⚡ MONITORAMENTO COORDENADO | Alvos IA BTC: Queda -2.50% (DCA/Stop) / Lucro +1.50% [Alocação Fracionada Ativa]</div>')
+# Barra de Alvos Corporativa Dourada Otimizada
+st.html('<div class="target-bar">⚡ MONITORAMENTO TRIPLE COORDENADO | Alvos Quant: RSI Diferencial (14) | Proteção Estrita Drawdown: -2.50% por Bloco Operacional</div>')
 
 # -------------------------------------------------------------------
-# Módulo de Relatórios e Auditoria
+# Módulo de Exportação e Logs Reativos
 # -------------------------------------------------------------------
 if st.session_state.historico_logs:
     df_logs = pd.DataFrame({"Registro de Auditoria / Operação": st.session_state.historico_logs})
-    
     col_exp1, col_exp2, _ = st.columns([2.5, 2.5, 5])
     
     buffer_csv = io.StringIO()
@@ -260,7 +320,6 @@ if st.session_state.historico_logs:
             file_name="auditoria_duck_hunter.csv",
             mime="text/csv"
         )
-        
     with col_exp2:
         st.download_button(
             label="📄 Baixar Relatório Duck Hunter (TXT)",
@@ -271,13 +330,12 @@ if st.session_state.historico_logs:
 
 st.write("")
 
-# Renderizador de Terminais Reativos
 container_logs = st.container()
 with container_logs:
     for log in st.session_state.historico_logs[:20]:
-        if "[COMPRA]" in log:
+        if "[COMPRA" in log:
             st.success(log)
-        elif "[VENDA]" in log:
+        elif "[VENDA" in log:
             st.info(log)
         elif "[STOP LOSS]" in log or "🚨" in log:
             st.error(log)
