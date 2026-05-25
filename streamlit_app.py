@@ -10,65 +10,54 @@ import io
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
 st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Futurista Avançado - Tema Terminal Quantum / Cyberpunk
+# CSS Futurista Otimizado para Compressão Máxima e Layout Inline (Sem Sidebar)
 st.html("""
     <style>
-    /* Reset de Viewport e Margens de Alta Densidade */
-    .block-container { padding-top: 2.8rem !important; padding-bottom: 0px !important; max-width: 98% !important; }
+    .block-container { padding-top: 3.5rem !important; padding-bottom: 0px !important; max-width: 98% !important; }
     .reportview-container { background: #070a13 !important; color: #e2e8f0; }
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedSidebarMenu"] { display: none !important; }
     
-    /* Grid Horizontal Estilo Glassmorphism Futurista */
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 10px;
-    }
+    /* Grid de Painéis Baseado em Linhas Limpas */
     .panel-card {
         background: linear-gradient(135deg, #0f1424 0%, #0b0f19 100%);
         border: 1px solid #1e2942;
-        padding: 12px 16px;
+        padding: 10px 15px;
         border-radius: 4px;
-        box-shadow: 0 0 15px rgba(0, 255, 196, 0.03);
-        transition: all 0.3s ease;
+        box-shadow: 0 0 15px rgba(0, 255, 196, 0.02);
     }
-    .panel-card:hover { border-color: #00ffc4; box-shadow: 0 0 20px rgba(0, 255, 196, 0.1); }
     .panel-label { font-size: 10px; text-transform: uppercase; color: #475569; font-weight: 800; letter-spacing: 1px; }
-    .panel-value { font-size: 22px; font-weight: 800; color: #ffffff; margin-top: 2px; font-family: 'Courier New', monospace; }
+    .panel-value { font-size: 21px; font-weight: 800; color: #ffffff; margin-top: 2px; font-family: monospace; }
     .panel-subvalue { font-size: 11px; color: #94a3b8; margin-top: 1px; }
     
-    /* HUD de Mensagem Dinâmica da IA */
+    /* HUD Superior */
     .target-bar {
         background-color: #0d1527;
         border: 1px solid #1d4ed8;
-        padding: 6px 14px;
+        padding: 5px 12px;
         border-radius: 4px;
         color: #38bdf8;
         font-size: 12px;
         font-weight: 700;
         text-align: center;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
     }
-    .graph-title { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .graph-title { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
     
-    /* Customização dos Botões Operacionais Inline */
+    /* Força os botões de download ficarem inline horizontalmente */
+    div[data-testid="stDownloadButton"] { display: inline-block !important; margin-right: 8px !important; margin-bottom: 5px !important; }
     div[data-testid="stDownloadButton"] button {
         background-color: #0f172a !important;
         border: 1px solid #1e293b !important;
         color: #94a3b8 !important;
-        border-radius: 4px !important;
-        padding: 4px 10px !important;
+        padding: 4px 12px !important;
         font-size: 11px !important;
     }
     div[data-testid="stDownloadButton"] button:hover { border-color: #00ffc4 !important; color: #00ffc4 !important; }
-    div[data-testid="stDownloadButton"] { display: inline-block !important; margin-right: 6px !important; }
     </style>
 """)
 
 # -------------------------------------------------------------------
-# Configurações de Conexão e Inicialização Híbrida Supabase
+# Configurações de Conexão Supabase e Inicialização
 # -------------------------------------------------------------------
 SUPABASE_URL = "https://supabase.co"
 SUPABASE_KEY = "seu-anon-key-do-supabase"
@@ -88,7 +77,7 @@ def carregar_estado_banco():
         "saldo_btc": 0.0, "preco_compra_btc": 0.0,
         "saldo_eth": 0.0, "preco_compra_eth": 0.0,
         "saldo_sol": 0.0, "preco_compra_sol": 0.0,
-        "historico_logs": ["🦅 Duck Hunter Quantum Inicializado. Pronto para execução."],
+        "historico_logs": ["🦆 Duck Hunter Caçador de Oportunidades Online."],
         "lucro_total": 0.0
     }
     if supabase:
@@ -166,11 +155,11 @@ def analisar_mercado_autonomo(par, base_p):
 # Motor de Loop Operacional Multi-Ativo
 # -------------------------------------------------------------------
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
-historicos_graficos = {"btc": [], "eth": [], "sol": []}
+historicos_graficos = {"btc": [65000.0]*30, "eth": [3450.0]*30, "sol": [160.0]*30}
 msg_ia = "RADAR EM STANDBY // AGUARDANDO ATIVAÇÃO DO OPERADOR"
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v8_cyber")
+    st_autorefresh(interval=4000, key="duck_loop_v10")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -184,7 +173,7 @@ if st.session_state.radar_ligado:
             st.session_state.saldo_usdt -= aloc
             st.session_state[f"saldo_{m}"] += aloc / pr
             st.session_state[f"preco_compra_{m}"] = pr
-            st.session_state.historico_logs.insert(0, f"🛒 [{t_atual}] [EXECUTION_BUY]: {m.upper()} alocado a ${pr:,.2f}")
+            st.session_state.historico_logs.insert(0, f"🛒 [{t_atual}] [EXEC_BUY]: {m.upper()} alocado a ${pr:,.2f}")
             salvar_estado_banco()
         elif acao == "VENDER" and st.session_state[f"saldo_{m}"] > 0 and pr > st.session_state[f"preco_compra_{m}"]:
             ret = st.session_state[f"saldo_{m}"] * pr
@@ -192,7 +181,7 @@ if st.session_state.radar_ligado:
             st.session_state.saldo_usdt += ret
             st.session_state.lucro_total += lucro
             st.session_state[f"saldo_{m}"], st.session_state[f"preco_compra_{m}"] = 0.0, 0.0
-            st.session_state.historico_logs.insert(0, f"💰 [{t_atual}] [PROFIT_TAKEN]: {m.upper()} liquidado | PNL: +${lucro:,.2f}")
+            st.session_state.historico_logs.insert(0, f"💰 [{t_atual}] [PROFIT]: {m.upper()} liquidado | +${lucro:,.2f}")
             salvar_estado_banco()
 else:
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -201,11 +190,11 @@ else:
         historicos_graficos[m] = hist
 
 # -------------------------------------------------------------------
-# Renderização do Painel HUD Superior
+# Renderização da Interface Visual HUD Unificada
 # -------------------------------------------------------------------
 c_tit, c_tog, c_bar = st.columns([2.2, 1.4, 6.4])
 with c_tit:
-    st.html('<div style="font-size: 21px; font-weight: 900; color: #00ffc4; padding-top: 1px; font-family:\'Courier New\', monospace; letter-spacing:1px;">🦅 DUCK HUNTER</div>')
+    st.html('<div style="font-size: 21px; font-weight: 900; color: #00ffc4; padding-top: 1px; font-family:monospace; letter-spacing:1px;">🦆 DUCK HUNTER</div>')
 with c_tog:
     ant = st.session_state.radar_ligado
     lbl = "🟢 SYS_ON" if st.session_state.radar_ligado else "🔴 SYS_STDBY"
@@ -217,7 +206,7 @@ with c_tog:
 with c_bar:
     st.html(f'<div class="target-bar">⚡ QUANTUM ENGINE MATRIX // {msg_ia}</div>')
 
-# Grid Avançado com Destaques de Preço Real em Neon
+# Balanço Global em Cards Horizontais Nativos (Prevenção de quebra de chaves)
 patr = st.session_state.saldo_usdt + sum(st.session_state[f"saldo_{m}"] * precos_reais[m] for m in ["btc", "eth", "sol"])
 
 c_m1, c_m2, c_m3, c_m4 = st.columns(4)
@@ -230,15 +219,14 @@ with c_m3:
 with c_m4:
     st.html(f'<div class="panel-card"><div class="panel-label">SOL OPERATIONAL NODE</div><div class="panel-value">{st.session_state.saldo_sol:.2f} SOL</div><div class="panel-subvalue">Pm: ${st.session_state.preco_compra_sol:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["sol"]:,.2f}</span></div></div>')
 
-# Seção de Gráficos Otimizada com Forçamento Dinâmico de Eixo Y (Ajuste de Escala)
+# Seção de Gráficos Otimizada com Zoom Dinâmico no Eixo Y (Usando o DataFrame do Pandas nativo)
 st.write("")
-st.markdown("<p style='font-size: 11px; font-weight: 800; color:#64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;'>📊 REAL-TIME HFT GRAPH MATRIX (Y-AXIS DYNAMIC ZOOM)</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 11px; font-weight: 800; color:#64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;'>📊 REAL-TIME HFT GRAPH MATRIX (Y-AXIS AUTOMATIC ZOOM)</p>", unsafe_allow_html=True)
 
 g1, g2, g3 = st.columns(3)
 with g1:
     st.markdown('<div class="graph-title">📈 DATA_FEED: BTC/USDT</div>', unsafe_allow_html=True)
     df_btc = pd.DataFrame(historicos_graficos["btc"], columns=["Preço"])
-    # Correção de escala: O Streamlit ajustará a base do eixo Y automaticamente para o menor valor da lista
     st.line_chart(df_btc, height=115, use_container_width=True)
 with g2:
     st.markdown('<div class="graph-title">📈 DATA_FEED: ETH/USDT</div>', unsafe_allow_html=True)
@@ -249,7 +237,7 @@ with g3:
     df_sol = pd.DataFrame(historicos_graficos["sol"], columns=["Preço"])
     st.line_chart(df_sol, height=115, use_container_width=True)
 
-# Módulo de Extração de Dados e Terminal Holográfico
+# Módulo de Extração Inline Horizontal
 if st.session_state.historico_logs:
     df_logs = pd.DataFrame({"Auditoria": st.session_state.historico_logs})
     buf = io.StringIO()
@@ -260,6 +248,6 @@ if st.session_state.historico_logs:
 
 with st.container():
     for log in st.session_state.historico_logs[:6]:
-        if "[COMPRA" in log: st.success(log)
-        elif "[LUCRO" in log: st.info(log)
+        if "[EXEC_" in log or "[COMPRA" in log: st.success(log)
+        elif "[PROFIT" in log or "[LUCRO" in log: st.info(log)
         else: st.code(log)
