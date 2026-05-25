@@ -20,11 +20,12 @@ st.markdown("""
     .metric-card { background-color: #111827; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; flex: 1; text-align: center; }
     .metric-label { font-size: 12px; color: #8892b0; font-weight: bold; text-transform: uppercase; }
     .metric-value { font-size: 18px; color: #ffffff; font-weight: bold; margin-top: 5px; }
-    .metric-price { font-size: 18px; color: #00ffcc; font-weight: bold; margin-top: 5px; }
+    .metric-price { font-size: 18px; color: #ffcc00; font-weight: bold; margin-top: 5px; }
     .stAlert { background-color: #161f30 !important; border: 1px solid #1e293b !important; color: #ffffff !important; }
     div[data-testid="stDownloadButton"] > button {
-        width: 100% !important; background-color: #111827 !important; color: #00ffcc !important;
-        border: 1px solid #00ffcc !important; font-size: 14px !important; padding: 8px !important; border-radius: 6px !important;
+        width: 100% !important; background-color: #111827 !important;
+        color: #ffcc00 !important; border: 1px solid #ffcc00 !important;
+        font-size: 14px !important; padding: 8px !important; margin-bottom: 20px !important; border-radius: 6px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -48,8 +49,8 @@ def sincronizar_banco_seguro():
             if not st.session_state['db_sincronizado']:
                 res = supabase.table("duck_memory").select("*").eq("id", 1).execute()
                 if res.data and len(res.data) > 0:
-                    dados = res.data[0]
-                    st.session_state['bot_ativo'] = dados.get('bot_ativo', False)
+                    dados = res.data
+                    st.session_state['bot_ativo'] = dados.get('bot_ativo', st.session_state['bot_ativo'])
                     if dados.get('historico_logs'):
                         st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', 10000.0))
                         st.session_state['saldo_btc'] = float(dados.get('saldo_btc', 0.0))
@@ -75,7 +76,7 @@ def salvar_na_nuvem_background():
         except: pass
 
 if st.session_state['bot_ativo']:
-    st_autorefresh(interval=3000, key="duck_hunter_heartbeat") [1]
+    st_autorefresh(interval=4000, key="duck_hunter_heartbeat")
 
 if st.session_state['bot_ativo']:
     cor_b, texto_b = "#00ffcc", "🟢 RADAR CAÇANDO (CLIQUE PARA PAUSAR)"
@@ -97,13 +98,12 @@ if st.button(texto_b):
     salvar_na_nuvem_background()
     st.rerun()
 
-@st.cache_data(ttl=1) 
+@st.cache_data(ttl=2) 
 def analisar_mercado_real():
     try:
         exchange = ccxt.binance()
         ticker = exchange.fetch_ticker('BTC/USDT')
-        preco_flutuante = float(ticker['last']) + random.uniform(-15.0, 15.0)
-        return preco_flutuante, float(ticker['change']) if ticker['change'] else 0.0
+        return float(ticker['last']), float(ticker['change']) if ticker['change'] else 0.0
     except:
         return random.randint(62000, 65000), 0.0
 
@@ -129,12 +129,12 @@ st.markdown(f"""
 
 df_relatorio = pd.DataFrame(st.session_state['historico'] if st.session_state['historico'] else ["Inicializado"], columns=["Registro"])
 csv_data = df_relatorio.to_csv(index=False).encode('utf-8')
-st.download_button(label="📥 Baixar Relatório (CSV)", data=csv_data, file_name="duck_report.csv", mime="text/csv")
+st.download_button(label="📥 Baixar Relatório de Caça (CSV)", data=csv_data, file_name="duck_report.csv", mime="text/csv")
 
 if st.session_state['bot_ativo']:
     st.success(status_ia_tempo)
     
-    if random.random() > 0.80:
+    if random.random() > 0.85:
         baleias = ["MobyDuck_Wallet", "Kraken_Whale_7", "Insider_Sol_0x92"]
         timestamp = datetime.now().strftime('%H:%M:%S')
         st.session_state['historico'].append(f"🐋 [{timestamp}] RADAR ON-CHAIN: {random.choice(baleias)} detectada na rede Solana.")
@@ -173,9 +173,11 @@ if st.session_state['bot_ativo']:
         st.toast("💵 Venda executada.")
         salvar_na_nuvem_background()
 else:
-    st.warning("💤 Robô pausado. Clique no botão acima para iniciar a caça.")
+    st.sidebar.markdown("") # Elemento neutro para manter estabilidade vertical
 
 st.write("### 📜 Histórico de Caça")
 if st.session_state['historico']:
     for acao in reversed(st.session_state['historico']):
         st.info(acao)
+else:
+    st.write("*Nenhuma operação realizada ainda.*")
