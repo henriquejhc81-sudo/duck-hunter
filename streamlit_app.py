@@ -10,7 +10,7 @@ import io
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
 st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Premium Terminal Quantum - Sem Ícone Superior e com Contraste Corrigido
+# CSS Premium Terminal Quantum - Sem Ícone Superior e Margens Ajustadas
 st.html("""
     <style>
     .block-container { 
@@ -32,7 +32,7 @@ st.html("""
         text-shadow: 0 0 12px rgba(0, 255, 196, 0.4);
     }
     
-    /* Grid de Painéis com Bordas Otimizadas */
+    /* Grid de Painéis */
     .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -64,7 +64,7 @@ st.html("""
         letter-spacing: 0.5px;
     }
     
-    /* Caixa do Terminal Corrigida */
+    /* Caixa do Terminal Quantum */
     .terminal-box {
         background: #03050a !important;
         border: 1px solid #1e293b !important;
@@ -79,7 +79,7 @@ st.html("""
         box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
     }
     
-    /* Dropdown e Botão Mestre de Exportação Inline */
+    /* Ajuste para alinhar os elementos de download frontalmente na mesma linha */
     div[data-testid="stDownloadButton"] button {
         background-color: #0c1524 !important;
         border: 1px solid #00ffc4 !important;
@@ -177,7 +177,7 @@ def analisar_mercado_autonomo(par, base_p):
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
-        rsi_c, rsi_v, stop, status = (30, 70, 1.8, "🛡️ MODO PROTEÇÃO") if vola > 0.15 else (38, 62, 2.5, "🔥 CAÇA LUCRO")
+        rsi_c, rsi_v, stop, status = (32, 68, 1.8, "🛡️ MODO PROTEÇÃO") if vola > 0.15 else (40, 60, 2.5, "🔥 CAÇA LUCRO")
         
         gatilho = "AGUARDAR"
         if rsi <= rsi_c: gatilho = "COMPRAR"
@@ -194,7 +194,7 @@ precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
 msg_ia = "RADAR EM STANDBY // AGUARDANDO ATIVAÇÃO DO OPERADOR"
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v13_final")
+    st_autorefresh(interval=4000, key="duck_loop_v14_final")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -258,13 +258,15 @@ with c_m4:
 st.write("")
 
 # -------------------------------------------------------------------
-# Central Única de Download Tri-Formato (Dropdown + Botão Mestre)
+# Central Única de Exportação Inline (Alinhada na Frente)
 # -------------------------------------------------------------------
 st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; margin-bottom: 2px;'>📋 CENTRAL DE EXPORTAÇÃO E AUDITORIA DE OPERAÇÕES</p>", unsafe_allow_html=True)
 
 if st.session_state.historico_logs:
     df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state.historico_logs})
-    c_sel, c_btn, _ = st.columns([3.5, 2.5, 4])
+    
+    # Grid de 3 colunas para colocar o Dropdown e o Botão perfeitamente na frente
+    c_sel, c_btn, _ = st.columns([4.0, 3.0, 3.0])
     
     with c_sel:
         formato = st.selectbox(
@@ -288,22 +290,21 @@ if st.session_state.historico_logs:
     else:
         buf_dados = io.StringIO()
         buf_dados.write("==================================================\n")
-        buf_dados.write("       🦆 DUCK HUNTER EXECUTIVE AUDIT REPORT      \n")
-        buf_dados.write(f"       DATA DE EMISSÃO: {time.strftime('%d/%m/%Y %H:%M:%S')}  \n")
+        buf_dados.write("            DUCK HUNTER EXECUTIVE REPORT          \n")
+        buf_dados.write(f"       EMISSÃO: {time.strftime('%d/%m/%Y %H:%M:%S')}  \n")
         buf_dados.write("==================================================\n\n")
         for log in st.session_state.historico_logs:
             buf_dados.write(f"- {log}\n")
-        nome_arquivo = "comercial_report_duck.pdf"
+        nome_arquivo = "report_duck.pdf"
         tipo_mime = "application/pdf"
         label_btn = "🖨️ GERAR DOCUMENTO PDF"
 
     with c_btn:
         st.download_button(label=label_btn, data=buf_dados.getvalue(), file_name=nome_arquivo, mime=tipo_mime)
 
-# Terminal Real-Time Corrigido com Fechamento Estrito de Tags
-st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; margin-bottom: 2px;'>📟 LIVE MATRIX TERMINAL FEED</p>", unsafe_allow_html=True)
+# Terminal Real-Time com o novo título de texto limpo solicitado
+st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; margin-bottom: 2px;'>DUCK HUNTER CAÇADOR DE OPORTUNIDADES INICIALIZADO</p>", unsafe_allow_html=True)
 
-# Geração segura do bloco interno de logs em string única antes de injetar na viewport
 terminal_content = ""
 for log in st.session_state.historico_logs[:20]:
     if "[EXEC_" in log or "[COMPRA" in log:
@@ -313,5 +314,4 @@ for log in st.session_state.historico_logs[:20]:
     else:
         terminal_content += f"<div style='color: #64748b; margin-bottom: 4px;'>{log}</div>"
 
-# Injeta a estrutura inteiramente envelopada de forma blindada
 st.html(f'<div class="terminal-box">{terminal_content}</div>')
