@@ -6,10 +6,11 @@ from supabase import create_client, Client
 from streamlit_autorefresh import st_autorefresh
 import numpy as np
 
-# Configuração da página e Interface Black/Cyberpunk
-st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦅", layout="wide")
+# Configuração da página e Interface Black/Cyberpunk com Pato 🦆
+st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide")
 
-st.markdown("""
+# Correção do erro usando st.html para estilização CSS segura
+st.html("""
     <style>
     .reportview-container { background: #0b0f19; color: #e2e8f0; }
     .metric-card {
@@ -23,7 +24,7 @@ st.markdown("""
     .metric-val { font-size: 24px; font-weight: bold; color: #38bdf8; }
     .log-text { font-family: 'Courier New', Courier, monospace; font-size: 13px; }
     </style>
-""", unsafe_allowed_html=True)
+""")
 
 # -------------------------------------------------------------------
 # Configurações de Conexão (Substitua pelos seus dados reais)
@@ -51,7 +52,7 @@ def carregar_estado_banco():
         "saldo_usdt": 10000.0,
         "saldo_btc": 0.0,
         "preco_compra": 0.0,
-        "historico_logs": ["🦅 Sistema Duck Hunter Inicializado. Pronto para Caça."],
+        "historico_logs": ["🦆 Sistema Duck Hunter Inicializado. Pronto para Caça."],
         "lucro_total": 0.0
     }
     
@@ -59,7 +60,7 @@ def carregar_estado_banco():
         try:
             response = supabase.table("duck_memory").select("*").eq("id", 1).execute()
             if response.data:
-                dados = response.data[0]
+                dados = response.data
                 return {
                     "radar_ligado": dados.get("radar_ligado", False),
                     "saldo_usdt": float(dados.get("saldo_usdt", 10000.0)),
@@ -133,7 +134,7 @@ def analisar_mercado_institucional():
 # -------------------------------------------------------------------
 # Interface Gráfica e Monitor de Controle
 # -------------------------------------------------------------------
-st.title("🦅 DUCK HUNTER - Institutional Alpha Bot")
+st.title("🦆 DUCK HUNTER - Institutional Alpha Bot")
 st.subheader("Central de Inteligência Baseada em Fluxo de Fundos de Capital de Risco")
 
 # Painel Lateral de Controle Comercial
@@ -192,22 +193,29 @@ if st.session_state.radar_ligado:
             st.session_state.historico_logs.insert(0, f"💰 [VENDA]: Posição liquidada a ${preco:,.2f} | Lucro de: +${lucro:,.2f}")
             salvar_estado_banco()
 
-    # --- GERENCIADOR DE SEGURANÇA: STOP LOSS CORPORATIVO ---
-    if st.session_state.saldo_btc > 0 and st.session_state.preco_compra > 0:
-        variacao_percentual = ((preco - st.session_state.preco_compra) / st.session_state.preco_compra) * 100
+# --- GERENCIADOR DE SEGURANÇA: STOP LOSS CORPORATIVO ---
+if st.session_state.get("saldo_btc", 0.0) > 0 and st.session_state.get("preco_compra", 0.0) > 0:
+    # Vinculado ao preço obtido na varredura do ciclo ativo
+    try:
+        candles_sl = exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=1)
+        preco_atual_sl = candles_sl[0][4]
+    except:
+        preco_atual_sl = st.session_state.preco_compra
+
+    variacao_percentual = ((preco_atual_sl - st.session_state.preco_compra) / st.session_state.preco_compra) * 100
+    
+    # Stop loss agressivo ajustado para -2.5% para preservar o patrimônio corporativo
+    if variacao_percentual <= -2.5:
+        retorno_usdt = st.session_state.saldo_btc * preco_atual_sl
+        perda = (st.session_state.saldo_btc * st.session_state.preco_compra) - retorno_usdt
         
-        # Stop loss agressivo ajustado para -2.5% para preservar o patrimônio corporativo
-        if variacao_percentual <= -2.5:
-            retorno_usdt = st.session_state.saldo_btc * preco
-            perda = (st.session_state.saldo_btc * st.session_state.preco_compra) - retorno_usdt
-            
-            st.session_state.saldo_usdt += retorno_usdt
-            st.session_state.lucro_total -= perda
-            st.session_state.saldo_btc = 0.0
-            st.session_state.preco_compra = 0.0
-            
-            st.session_state.historico_logs.insert(0, f"🚨 [STOP LOSS]: Proteção de capital ativada a ${preco:,.2f} | Perda: -${perda:,.2f}")
-            salvar_estado_banco()
+        st.session_state.saldo_usdt += retorno_usdt
+        st.session_state.lucro_total -= perda
+        st.session_state.saldo_btc = 0.0
+        st.session_state.preco_compra = 0.0
+        
+        st.session_state.historico_logs.insert(0, f"🚨 [STOP LOSS]: Proteção de capital ativada a ${preco_atual_sl:,.2f} | Perda: -${perda:,.2f}")
+        salvar_estado_banco()
 
 # -------------------------------------------------------------------
 # Renderização da Interface Visual (Painel de Métricas Atualizado)
