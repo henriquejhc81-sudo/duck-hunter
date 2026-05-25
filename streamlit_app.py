@@ -123,7 +123,7 @@ if "inicializado" not in st.session_state:
 def analisar_mercado_institucional():
     try:
         candles = exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=10)
-        precos_fechamento = [c[4] for c in candles]
+        precos_fechamento = [c for c in candles]
         preco_atual = precos_fechamento[-1]
         
         media_mercado = np.mean(precos_fechamento)
@@ -202,16 +202,16 @@ else:
 # -------------------------------------------------------------------
 # Renderização da Interface Visual Unificada (Estilo Concorrente)
 # -------------------------------------------------------------------
-st.markdown('<div class="brand-title">DUCK HUNTER</div>', unsafe_allowed_html=True)
+st.html('<div class="brand-title">DUCK HUNTER</div>')
 
 # Linha de Botões de Controle Superior
-col_btn1, _ = st.columns([2, 8])
+col_btn1, _ = st.columns([4, 8])
 with col_btn1:
     status_anterior = st.session_state.radar_ligado
     label_radar = "🟢 RADAR MULTI-ATIVO ATIVO" if st.session_state.radar_ligado else "🔴 RADAR ADORMECIDO"
     radar_ativo = st.toggle(label_radar, value=st.session_state.radar_ligado)
-    st.session_state.radar_ligado = radar_ativo
     if status_anterior != radar_ativo:
+        st.session_state.radar_ligado = radar_ativo
         salvar_estado_banco()
         st.rerun()
 
@@ -240,10 +240,7 @@ grid_html = f"""
 st.html(grid_html)
 
 # Barra de Alvos Corporativa Dourada
-st.markdown(
-    '<div class="target-bar">⚡ MONITORAMENTO COORDENADO | Alvos IA BTC: Queda -2.50% (DCA/Stop) / Lucro +1.50% [Alocação Fracionada Ativa]</div>', 
-    unsafe_allowed_html=True
-)
+st.html('<div class="target-bar">⚡ MONITORAMENTO COORDENADO | Alvos IA BTC: Queda -2.50% (DCA/Stop) / Lucro +1.50% [Alocação Fracionada Ativa]</div>')
 
 # -------------------------------------------------------------------
 # Módulo de Relatórios e Auditoria
@@ -266,7 +263,7 @@ if st.session_state.historico_logs:
         
     with col_exp2:
         st.download_button(
-            label="📄 Baixar Relatório Duck Hunter (PDF/TXT)",
+            label="📄 Baixar Relatório Duck Hunter (TXT)",
             data=buffer_csv.getvalue(),
             file_name="relatorio_duck_hunter.txt",
             mime="text/plain"
