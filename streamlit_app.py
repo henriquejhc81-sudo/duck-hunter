@@ -10,7 +10,7 @@ import io
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
 st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Premium Terminal Quantum - Sem Ícone Superior e Margens Alinhadas
+# CSS Premium Terminal Quantum - Sem Ícones e Margem Superior Ajustada
 st.html("""
     <style>
     .block-container { 
@@ -51,7 +51,7 @@ st.html("""
     .panel-value { font-size: 23px; font-weight: bold; color: #ffffff; margin-top: 2px; font-family: 'Courier New', monospace; }
     .panel-subvalue { font-size: 11px; color: #94a3b8; margin-top: 2px; }
     
-    /* HUD de Mensagens da IA Dourado/Azul */
+    /* HUD de Mensagens da IA */
     .target-bar {
         background-color: #0c1524;
         border: 1px solid #1d4ed8;
@@ -79,7 +79,7 @@ st.html("""
         box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
     }
     
-    /* Alinhamento Frontal dos botões */
+    /* Central de Exportação Inline */
     div[data-testid="stDownloadButton"] button {
         background-color: #0c1524 !important;
         border: 1px solid #00ffc4 !important;
@@ -95,69 +95,64 @@ st.html("""
 """)
 
 # -------------------------------------------------------------------
-# Configurações de Conexão Supabase e Inicialização
+# Mecanismo de Sincronização Segura via Secrets (Herdado do PDF)
 # -------------------------------------------------------------------
-SUPABASE_URL = "https://supabase.co"
-SUPABASE_KEY = "seu-anon-key-do-supabase"
+def sincronizar_banco_seguro():
+    try:
+        url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase_url")
+        key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase_key")
+        if url and key:
+            db_client = create_client(url, key)
+            if not st.session_state.get('db_sincronizado', False):
+                res = db_client.table("duck_memory").select("*").eq("id", 1).execute()
+                if res.data and len(res.data) > 0:
+                    dados = res.data[0]
+                    st.session_state['bot_ativo'] = dados.get('bot_ativo', False)
+                    st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', 10000.0))
+                    st.session_state['saldo_btc'] = float(dados.get('saldo_btc', 0.0))
+                    st.session_state['preco_compra_btc'] = float(dados.get('preco_compra_btc', 0.0))
+                    st.session_state['saldo_eth'] = float(dados.get('saldo_eth', 0.0))
+                    st.session_state['preco_compra_eth'] = float(dados.get('preco_compra_eth', 0.0))
+                    st.session_state['saldo_sol'] = float(dados.get('saldo_sol', 0.0))
+                    st.session_state['preco_compra_sol'] = float(dados.get('preco_compra_sol', 0.0))
+                    st.session_state['historico'] = dados.get('historico_logs', [])
+                    st.session_state['lucro_total'] = float(dados.get('lucro_total', 0.0))
+                    st.session_state['db_sincronizado'] = True
+            return db_client
+    except: pass
+    return None
 
-@st.cache_resource
-def init_supabase():
-    try: return create_client(SUPABASE_URL, SUPABASE_KEY)
-    except: return None
+# Inicialização Base de Estados de Memória Coerentes com o PDF
+if 'saldo_usdt' not in st.session_state: st.session_state['saldo_usdt'] = 10000.0
+if 'saldo_btc' not in st.session_state: st.session_state['saldo_btc'] = 0.0
+if 'preco_compra_btc' not in st.session_state: st.session_state['preco_compra_btc'] = 0.0
+if 'saldo_eth' not in st.session_state: st.session_state['saldo_eth'] = 0.0
+if 'preco_compra_eth' not in st.session_state: st.session_state['preco_compra_eth'] = 0.0
+if 'saldo_sol' not in st.session_state: st.session_state['saldo_sol'] = 0.0
+if 'preco_compra_sol' not in st.session_state: st.session_state['preco_compra_sol'] = 0.0
+if 'historico' not in st.session_state: st.session_state['historico'] = []
+if 'bot_ativo' not in st.session_state: st.session_state['bot_ativo'] = False
+if 'lucro_total' not in st.session_state: st.session_state['lucro_total'] = 0.0
 
-supabase = init_supabase()
+db_client = sincronizar_banco_seguro()
 exchange = ccxt.binance({'enableRateLimit': True})
 
-def carregar_estado_banco():
-    estado_padrao = {
-        "radar_ligado": False,
-        "saldo_usdt": 10000.0,
-        "saldo_btc": 0.0, "preco_compra_btc": 0.0,
-        "saldo_eth": 0.0, "preco_compra_eth": 0.0,
-        "saldo_sol": 0.0, "preco_compra_sol": 0.0,
-        "historico_logs": [],
-        "lucro_total": 0.0
-    }
-    if supabase:
+def salvar_na_nuvem_background():
+    if db_client:
         try:
-            response = supabase.table("duck_memory").select("*").eq("id", 1).execute()
-            if response.data:
-                dados = response.data[0]
-                return {
-                    "radar_ligado": dados.get("radar_ligado", False),
-                    "saldo_usdt": float(dados.get("saldo_usdt", 10000.0)),
-                    "saldo_btc": float(dados.get("saldo_btc", 0.0)),
-                    "preco_compra_btc": float(dados.get("preco_compra_btc", 0.0)),
-                    "saldo_eth": float(dados.get("saldo_eth", 0.0)),
-                    "preco_compra_eth": float(dados.get("preco_compra_eth", 0.0)),
-                    "saldo_sol": float(dados.get("saldo_sol", 0.0)),
-                    "preco_compra_sol": float(dados.get("preco_compra_sol", 0.0)),
-                    "historico_logs": dados.get("historico_logs", estado_padrao["historico_logs"]),
-                    "lucro_total": float(dados.get("lucro_total", 0.0))
-                }
+            db_client.table("duck_memory").update({
+                "saldo_usdt": st.session_state['saldo_usdt'],
+                "saldo_btc": st.session_state['saldo_btc'],
+                "preco_compra_btc": st.session_state['preco_compra_btc'],
+                "saldo_eth": st.session_state['saldo_eth'],
+                "preco_compra_eth": st.session_state['preco_compra_eth'],
+                "saldo_sol": st.session_state['saldo_sol'],
+                "preco_compra_sol": st.session_state['preco_compra_sol'],
+                "historico_logs": st.session_state['historico'][-25:],
+                "bot_ativo": st.session_state['bot_ativo'],
+                "lucro_total": st.session_state['lucro_total']
+            }).eq("id", 1).execute()
         except: pass
-    return estado_padrao
-
-def salvar_estado_banco():
-    if supabase:
-        payload = {
-            "id": 1, "radar_ligado": st.session_state.radar_ligado,
-            "saldo_usdt": st.session_state.saldo_usdt,
-            "saldo_btc": st.session_state.saldo_btc, "preco_compra_btc": st.session_state.preco_compra_btc,
-            "saldo_eth": st.session_state.saldo_eth, "preco_compra_eth": st.session_state.preco_compra_eth,
-            "saldo_sol": st.session_state.saldo_sol, "preco_compra_sol": st.session_state.preco_compra_sol,
-            "historico_logs": st.session_state.historico_logs, "lucro_total": st.session_state.lucro_total
-        }
-        try: supabase.table("duck_memory").upsert(payload).execute()
-        except: pass
-
-def alternar_radar_callback():
-    st.session_state.radar_ligado = st.session_state.toggle_chave
-    salvar_estado_banco()
-
-if "inicializado" not in st.session_state:
-    for k, v in carregar_estado_banco().items(): st.session_state[k] = v
-    st.session_state["inicializado"] = True
 # -------------------------------------------------------------------
 # Core Quant: Cálculo de RSI e Volatilidade Inteligente
 # -------------------------------------------------------------------
@@ -176,10 +171,11 @@ def calcular_rsi(precos, periodo=14):
 def analisar_mercado_autonomo(par, base_p):
     try:
         candles = exchange.fetch_ohlcv(par, timeframe='1m', limit=30)
-        fechamentos = [c[4] for c in candles] # Coleta estrita do preço de fechamento
+        fechamentos = [c[4] for c in candles]
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
+        # Inteligência Temporal Dinâmica Integrada (Inspirada no seu código original)
         rsi_c, rsi_v, stop, status = (32, 68, 1.8, "🛡️ MODO PROTEÇÃO") if vola > 0.15 else (40, 60, 2.5, "🔥 CAÇA LUCRO")
         
         gatilho = "AGUARDAR"
@@ -191,12 +187,13 @@ def analisar_mercado_autonomo(par, base_p):
         return base_p, "AGUARDAR", 50.0, 2.5, "⚙️ SYNCING"
 
 # -------------------------------------------------------------------
-# Motor de Loop Operacional Multi-Ativo e Definição de Mensagens
+# Motor de Loop Operacional Multi-Ativo Estável
 # -------------------------------------------------------------------
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
 
-if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v16_final")
+if st.session_state['bot_ativo']:
+    # O heartbeat herda a chave exata do seu código anterior para ativação segura
+    st_autorefresh(interval=4000, key="duck_hunter_heartbeat")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -204,21 +201,37 @@ if st.session_state.radar_ligado:
         precos_reais[m] = pr
         msg_ia = f"🦅 CAÇANDO ATIVOS INTEGRADOS // {status} // TRAILING STOP: -{sl}%"
         
-        if acao == "COMPRAR" and st.session_state.saldo_usdt >= 300:
-            aloc = st.session_state.saldo_usdt * 0.20
-            st.session_state.saldo_usdt -= aloc
+        # Proteção e Trailing Stop Corporativo por Ativo
+        saldo_token = st.session_state[f"saldo_{m}"]
+        pm_token = st.session_state[f"preco_compra_{m}"]
+        
+        if acao == "COMPRAR" and st.session_state['saldo_usdt'] >= 300:
+            aloc = st.session_state['saldo_usdt'] * 0.20
+            st.session_state['saldo_usdt'] -= aloc
             st.session_state[f"saldo_{m}"] += aloc / pr
             st.session_state[f"preco_compra_{m}"] = pr
-            st.session_state.historico_logs.insert(0, f"🛒 [{t_atual}] [EXEC_BUY]: {m.upper()} alocado a ${pr:,.2f} // RSI: {rsi:.1f}")
-            salvar_estado_banco()
-        elif acao == "VENDER" and st.session_state[f"saldo_{m}"] > 0 and pr > st.session_state[f"preco_compra_{m}"]:
-            ret = st.session_state[f"saldo_{m}"] * pr
-            lucro = ret - (st.session_state[f"saldo_{m}"] * st.session_state[f"preco_compra_{m}"])
-            st.session_state.saldo_usdt += ret
-            st.session_state.lucro_total += lucro
+            st.session_state['historico'].insert(0, f"🛒 [{t_atual}] [EXEC_BUY]: {m.upper()} alocado a ${pr:,.2f} // RSI: {rsi:.1f}")
+            salvar_na_nuvem_background()
+            
+        elif acao == "VENDER" and saldo_token > 0 and pr > pm_token:
+            ret = saldo_token * pr
+            lucro = ret - (saldo_token * pm_token)
+            st.session_state['saldo_usdt'] += ret
+            st.session_state['lucro_total'] += lucro
             st.session_state[f"saldo_{m}"], st.session_state[f"preco_compra_{m}"] = 0.0, 0.0
-            st.session_state.historico_logs.insert(0, f"💰 [{t_atual}] [PROFIT]: {m.upper()} liquidado | Lucro: +${lucro:,.2f}")
-            salvar_estado_banco()
+            st.session_state['historico'].insert(0, f"💰 [{t_atual}] [PROFIT]: {m.upper()} liquidado | Lucro: +${lucro:,.2f}")
+            salvar_na_nuvem_background()
+
+        if saldo_token > 0 and pm_token > 0:
+            desvalorizacao = ((pr - pm_token) / pm_token) * 100
+            if desvalorizacao <= -sl:
+                ret = saldo_token * pr
+                perda = (saldo_token * pm_token) - ret
+                st.session_state['saldo_usdt'] += ret
+                st.session_state['lucro_total'] -= perda
+                st.session_state[f"saldo_{m}"], st.session_state[f"preco_compra_{m}"] = 0.0, 0.0
+                st.session_state['historico'].insert(0, f"🚨 [{t_atual}] [STOP]: Proteção em {m.upper()} | -${perda:,.2f}")
+                salvar_na_nuvem_background()
 else:
     msg_ia = "RADAR EM STANDBY // MOTOR INTEGRADO"
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -229,35 +242,33 @@ else:
             precos_reais[m] = base
 
 # -------------------------------------------------------------------
-# Renderização da Interface Visual HUD Unificada (Premium)
+# Renderização da Interface Visual HUD Unificada
 # -------------------------------------------------------------------
 c_tit, c_tog, c_bar = st.columns([2.0, 1.4, 6.6])
 with c_tit:
     st.html('<div class="brand-header">DUCK HUNTER</div>')
 with c_tog:
-    # Vinculado ao callback limpo sem st.rerun redundante para evitar travamentos
-    st.toggle(
-        "Status", 
-        value=st.session_state.radar_ligado, 
-        key="toggle_chave", 
-        label_visibility="collapsed",
-        on_change=alternar_radar_callback
-    )
+    # Vinculado nativamente ao estado booleano 'bot_ativo' do seu código do PDF
+    novo_status = st.toggle("Status", value=st.session_state['bot_ativo'], label_visibility="collapsed")
+    if novo_status != st.session_state['bot_ativo']:
+        st.session_state['bot_ativo'] = novo_status
+        salvar_na_nuvem_background()
+        st.rerun()
 with c_bar:
     st.html(f'<div class="target-bar">⚡ QUANTUM ENGINE MATRIX // {msg_ia}</div>')
 
 # Balanço Global - Grid Premium de 4 Colunas Horizontais
-patr = st.session_state.saldo_usdt + sum(st.session_state[f"saldo_{m}"] * precos_reais[m] for m in ["btc", "eth", "sol"])
+patr = st.session_state['saldo_usdt'] + sum(st.session_state[f"saldo_{m}"] * precos_reais[m] for m in ["btc", "eth", "sol"])
 
 c_m1, c_m2, c_m3, c_m4 = st.columns(4)
 with c_m1:
-    st.html(f'<div class="panel-card"><div class="panel-label">🔻 NET WORTH PATRIMÔNIO</div><div class="panel-value" style="color:#00ffc4;">${patr:,.2f}</div><div class="panel-subvalue">CAIXA: ${st.session_state.saldo_usdt:,.2f} | PNL: ${st.session_state.lucro_total:,.2f}</div></div>')
+    st.html(f'<div class="panel-card"><div class="panel-label">🔻 NET WORTH PATRIMÔNIO</div><div class="panel-value" style="color:#00ffc4;">${patr:,.2f}</div><div class="panel-subvalue">CAIXA: ${st.session_state["saldo_usdt"]:,.2f} | PNL: ${st.session_state["lucro_total"]:,.2f}</div></div>')
 with c_m2:
-    st.html(f'<div class="panel-card"><div class="panel-label">BTC OPERATIONAL NODE</div><div class="panel-value">{st.session_state.saldo_btc:.4f} BTC</div><div class="panel-subvalue">Pm: ${st.session_state.preco_compra_btc:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["btc"]:,.2f}</span></div></div>')
+    st.html(f'<div class="panel-card"><div class="panel-label">BTC OPERATIONAL NODE</div><div class="panel-value">{st.session_state["saldo_btc"]:.4f} BTC</div><div class="panel-subvalue">Pm: ${st.session_state["preco_compra_btc"]:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["btc"]:,.2f}</span></div></div>')
 with c_m3:
-    st.html(f'<div class="panel-card"><div class="panel-label">ETH OPERATIONAL NODE</div><div class="panel-value">{st.session_state.saldo_eth:.3f} ETH</div><div class="panel-subvalue">Pm: ${st.session_state.preco_compra_eth:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["eth"]:,.2f}</span></div></div>')
+    st.html(f'<div class="panel-card"><div class="panel-label">ETH OPERATIONAL NODE</div><div class="panel-value">{st.session_state["saldo_eth"]:.3f} ETH</div><div class="panel-subvalue">Pm: ${st.session_state["preco_compra_eth"]:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["eth"]:,.2f}</span></div></div>')
 with c_m4:
-    st.html(f'<div class="panel-card"><div class="panel-label">SOL OPERATIONAL NODE</div><div class="panel-value">{st.session_state.saldo_sol:.2f} SOL</div><div class="panel-subvalue">Pm: ${st.session_state.preco_compra_sol:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["sol"]:,.2f}</span></div></div>')
+    st.html(f'<div class="panel-card"><div class="panel-label">SOL OPERATIONAL NODE</div><div class="panel-value">{st.session_state["saldo_sol"]:.2f} SOL</div><div class="panel-subvalue">Pm: ${st.session_state["preco_compra_sol"]:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["sol"]:,.2f}</span></div></div>')
 
 st.write("")
 
@@ -266,11 +277,9 @@ st.write("")
 # -------------------------------------------------------------------
 st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; margin-bottom: 2px;'>📋 CENTRAL DE EXPORTAÇÃO E AUDITORIA DE OPERAÇÕES</p>", unsafe_allow_html=True)
 
-df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state.historico_logs if st.session_state.historico_logs else ["Nenhum registro ainda."]})
+df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state['historico'] if st.session_state['historico'] else ["Nenhum registro ainda."]})
 
-# Grid frontalizado das caixas de exportação
 c_sel, c_btn, _ = st.columns([4.0, 3.0, 3.0])
-
 with c_sel:
     formato = st.selectbox(
         "Selecione o formato de saída do documento", 
@@ -295,7 +304,7 @@ else:
     buf_dados.write("==================================================\n")
     buf_dados.write("            DUCK HUNTER EXECUTIVE REPORT          \n")
     buf_dados.write("==================================================\n\n")
-    for log in st.session_state.historico_logs:
+    for log in st.session_state['historico']:
         buf_dados.write(f"- {log}\n")
     nome_arquivo = "report_duck.pdf"
     tipo_mime = "application/pdf"
@@ -304,12 +313,12 @@ else:
 with c_btn:
     st.download_button(label=label_btn, data=buf_dados.getvalue(), file_name=nome_arquivo, mime=tipo_mime)
 
-# Terminal Real-Time sem o texto estático interno antigo
+# Terminal Real-Time sem o texto estático interno
 st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; margin-bottom: 2px;'>DUCK HUNTER CAÇADOR DE OPORTUNIDADES INICIALIZADO</p>", unsafe_allow_html=True)
 
 terminal_content = ""
-if st.session_state.historico_logs:
-    for log in st.session_state.historico_logs[:20]:
+if st.session_state['historico']:
+    for log in st.session_state['historico'][:20]:
         if "[EXEC_" in log or "[COMPRA" in log:
             terminal_content += f"<div style='color: #00ffc4; font-weight: bold; margin-bottom: 4px;'>{log}</div>"
         elif "[PROFIT" in log or "[LUCRO" in log:
