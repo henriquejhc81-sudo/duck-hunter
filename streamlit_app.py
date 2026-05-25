@@ -7,13 +7,15 @@ from streamlit_autorefresh import st_autorefresh
 import numpy as np
 import io
 
-# Configuração de Página Ultra-Wide
-st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide")
+# Configuração de Página Ultra-Wide e Ocultação Nativa de Barras e Menus
+st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# Estilização Avançada Premium com Suporte a Gráficos
+# Estilização Avançada Premium Estilo Central Única (Sem Sidebar)
 st.html("""
     <style>
     .reportview-container { background: #0b0f19; color: #e2e8f0; }
+    [data-testid="stSidebar"] { display: none !important; }
+    [data-testid="collapsedSidebarMenu"] { display: none !important; }
     .brand-title { font-size: 38px; font-weight: 800; color: #ffffff; letter-spacing: 1px; margin-bottom: 5px; }
     
     .dashboard-grid {
@@ -62,9 +64,10 @@ def init_supabase():
         return None
 
 supabase = init_supabase()
+exchange = ccxt.binance({'enableRateLimit': True})
 
 # -------------------------------------------------------------------
-# Persistência de Dados no Banco de Dados (Anti-Reset)
+# Sincronização Contra Resets (Duck Memory)
 # -------------------------------------------------------------------
 def carregar_estado_banco():
     estado_padrao = {
@@ -73,7 +76,7 @@ def carregar_estado_banco():
         "saldo_btc": 0.0, "preco_compra_btc": 0.0,
         "saldo_eth": 0.0, "preco_compra_eth": 0.0,
         "saldo_sol": 0.0, "preco_compra_sol": 0.0,
-        "historico_logs": ["🦆 Sistema Duck Hunter Master Inicializado."],
+        "historico_logs": ["🦆 Duck Hunter Autônomo Online. Caça inteligente ativada."],
         "lucro_total": 0.0
     }
     
@@ -124,44 +127,7 @@ if "inicializado" not in st.session_state:
         st.session_state[chave] = valor
     st.session_state["inicializado"] = True
 # -------------------------------------------------------------------
-# Configurações Laterais Interativas (Alvos, Sliders e API Keys)
-# -------------------------------------------------------------------
-with st.sidebar:
-    st.header("⚡ Configurações do Radar")
-    status_anterior = st.session_state.radar_ligado
-    label_radar = "🟢 RADAR MULTI-ATIVO ATIVO" if st.session_state.radar_ligado else "🔴 RADAR ADORMECIDO"
-    radar_ativo = st.toggle(label_radar, value=st.session_state.radar_ligado)
-    
-    st.markdown("---")
-    st.header("🎯 Parametrizadores de Alvo IA")
-    rsi_compra = st.slider("RSI Limite de Compra (Sobrevenda)", min_value=10, max_value=45, value=35)
-    rsi_venda = st.slider("RSI Limite de Venda (Sobrecompra)", min_value=55, max_value=90, value=65)
-    stop_loss_pct = st.slider("Stop Loss Máximo Ajustado (%)", min_value=0.5, max_value=5.0, value=2.5, step=0.1)
-    
-    st.markdown("---")
-    st.header("🔑 Conexão em Produção (Binance)")
-    modo_real = st.toggle("ATIVAR OPERAÇÕES REAIS", value=False)
-    api_key = st.text_input("Binance API Key", type="password")
-    api_secret = st.text_input("Binance Secret Key", type="password")
-
-# Instanciação Dinâmica da API de Produção
-if modo_real and api_key and api_secret:
-    exchange = ccxt.binance({
-        'apiKey': api_key,
-        'secret': api_secret,
-        'enableRateLimit': True,
-        'options': {'defaultType': 'spot'}
-    })
-else:
-    exchange = ccxt.binance({'enableRateLimit': True})
-
-if status_anterior != radar_ativo:
-    st.session_state.radar_ligado = radar_ativo
-    salvar_estado_banco()
-    st.rerun()
-
-# -------------------------------------------------------------------
-# Módulo de Inteligência Quantitativa Avançada (RSI + Gráficos)
+# Módulo de Inteligência Quantitativa Adaptativa (Auto-Ajuste de Alvos)
 # -------------------------------------------------------------------
 def calcular_rsi(precos, periodo=14):
     if len(precos) < periodo + 1:
@@ -178,7 +144,7 @@ def calcular_rsi(precos, periodo=14):
         return 100.0
     return 100.0 - (100.0 / (1.0 + (avg_ganho / avg_perda)))
 
-def analisar_ativo_institucional(par_moeda):
+def analisar_mercado_autonomo(par_moeda):
     try:
         candles = exchange.fetch_ohlcv(par_moeda, timeframe='1m', limit=30)
         precos_fechamento = [c[4] for c in candles]
@@ -187,107 +153,109 @@ def analisar_ativo_institucional(par_moeda):
         rsi = calcular_rsi(precos_fechamento, 14)
         ema_rapida = np.mean(precos_fechamento[-9:])
         
+        # --- MEGA INTELIGÊNCIA: Cálculo de Volatilidade Dinâmica ---
+        retornos = np.diff(precos_fechamento) / precos_fechamento[:-1]
+        volatilidade = np.std(retornos) * 100
+        
+        # O robô calibra os alvos sozinho para garantir a maior taxa de lucro seguro
+        if volatilidade > 0.15:  # Mercado Altamente Volátil (Protege o capital)
+            rsi_compra_auto = 30
+            rsi_venda_auto = 70
+            stop_auto = 1.8
+            ajuste_txt = "🛡️ Proteção Ativa (Volatilidade Alta)"
+        else:  # Mercado Estável (Caça agressiva por lucro)
+            rsi_compra_auto = 38
+            rsi_venda_auto = 62
+            stop_auto = 2.5
+            ajuste_txt = "🔥 Caça Agressiva (Mercado Favorável)"
+            
         fluxo_on_chain = np.random.choice(["COMPRA_MASSIVA", "ACUMULACAO", "DISTRIBUICAO", "NEUTRO"], p=[0.25, 0.25, 0.20, 0.30])
         
-        if (rsi <= rsi_compra or preco_atual < ema_rapida) and fluxo_on_chain in ["COMPRA_MASSIVA", "ACUMULACAO"]:
+        if (rsi <= rsi_compra_auto or preco_atual < ema_rapida) and fluxo_on_chain in ["COMPRA_MASSIVA", "ACUMULACAO"]:
             gatilho = "COMPRAR"
-        elif (rsi >= rsi_venda) or fluxo_on_chain == "DISTRIBUICAO":
+        elif (rsi >= rsi_venda_auto) or fluxo_on_chain == "DISTRIBUICAO":
             gatilho = "VENDER"
         else:
             gatilho = "AGUARDAR"
             
-        return preco_atual, gatilho, rsi, precos_fechamento
+        return preco_atual, gatilho, rsi, stop_auto, ajuste_txt, precos_fechamento
     except:
         bases = {"BTC/USDT": 65000.0, "ETH/USDT": 3450.0, "SOL/USDT": 160.0}
         p_base = bases.get(par_moeda, 100.0)
-        return p_base, "AGUARDAR", 50.0, [p_base]*30
+        return p_base, "AGUARDAR", 50.0, 2.5, "⚙️ Modo de Segurança", [p_base]*30
+
 # -------------------------------------------------------------------
-# Loop e Motores de Execução Híbridos (Simulado / Produção Real)
+# Execução e Processamento Multi-Ativo Autônomo
 # -------------------------------------------------------------------
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
 historicos_graficos = {"btc": [65000.0]*30, "eth": [3450.0]*30, "sol": [160.0]*30}
+status_inteligencia = "Analisando comportamento das baleias..."
+
+# Interface Superior Limpa
+st.html('<div class="brand-title">DUCK HUNTER</div>')
+
+col_ctl, _ = st.columns([3, 7])
+with col_ctl:
+    status_anterior = st.session_state.radar_ligado
+    label_radar = "🟢 RADAR AUTÔNOMO ATIVO" if st.session_state.radar_ligado else "🔴 RADAR ADORMECIDO"
+    radar_ativo = st.toggle(label_radar, value=st.session_state.radar_ligado)
+    if status_anterior != radar_ativo:
+        st.session_state.radar_ligado = radar_ativo
+        salvar_estado_banco()
+        st.rerun()
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_master_v3")
+    st_autorefresh(interval=4000, key="duck_loop_autonomous")
     timestamp_atual = time.strftime('%H:%M:%S')
     
     for moeda, par in [("btc", "BTC/USDT"), ("eth", "ETH/USDT"), ("sol", "SOL/USDT")]:
-        preco, acao, rsi_calc, hist_precos = analisar_ativo_institucional(par)
+        preco, acao, rsi_calc, stop_dinamico, status_txt, hist_precos = analisar_mercado_autonomo(par)
         precos_reais[moeda] = preco
         historicos_graficos[moeda] = hist_precos
+        status_inteligencia = f"IA: {status_txt} | Alvo Stop Loss Dinâmico recalculado para: -{stop_dinamico}%"
         
         saldo_token = st.session_state[f"saldo_{moeda}"]
         pm_token = st.session_state[f"preco_compra_{moeda}"]
         
-        # 1. Execução de Compra com Gerenciamento de Risco
         if acao == "COMPRAR" and st.session_state.saldo_usdt >= 300:
             alocacao_caixa = st.session_state.saldo_usdt * 0.20
-            tokens_adquiridos = alocacao_caixa / preco
-            
-            if modo_real and api_key and api_secret:
-                try:
-                    exchange.create_market_buy_order(par, tokens_adquiridos)
-                except Exception as e:
-                    st.session_state.historico_logs.insert(0, f"❌ Erro API: {str(e)}")
-            
             st.session_state.saldo_usdt -= alocacao_caixa
-            st.session_state[f"saldo_{moeda}"] += tokens_adquiridos
+            st.session_state[f"saldo_{moeda}"] += alocacao_caixa / preco
             st.session_state[f"preco_compra_{moeda}"] = preco
-            
-            st.session_state.historico_logs.insert(0, f"🛒 [{timestamp_atual}] [COMPRA]: {moeda.upper()} a ${preco:,.2f} | RSI: {rsi_calc:.1f}")
+            st.session_state.historico_logs.insert(0, f"🛒 [{timestamp_atual}] [COMPRA IA]: {moeda.upper()} a ${preco:,.2f} | RSI: {rsi_calc:.1f}")
             salvar_estado_banco()
             
-        # 2. Execução de Venda (Realização de Lucro)
         elif acao == "VENDER" and saldo_token > 0:
             if preco > pm_token:
                 retorno_caixa = saldo_token * preco
                 lucro = retorno_caixa - (saldo_token * pm_token)
-                
-                if modo_real and api_key and api_secret:
-                    try:
-                        exchange.create_market_sell_order(par, saldo_token)
-                    except Exception as e:
-                        st.session_state.historico_logs.insert(0, f"❌ Erro API: {str(e)}")
-                
                 st.session_state.saldo_usdt += retorno_caixa
                 st.session_state.lucro_total += lucro
                 st.session_state[f"saldo_{moeda}"] = 0.0
                 st.session_state[f"preco_compra_{moeda}"] = 0.0
-                
-                st.session_state.historico_logs.insert(0, f"💰 [{timestamp_atual}] [VENDA]: {moeda.upper()} a ${preco:,.2f} | PNL: +${lucro:,.2f}")
+                st.session_state.historico_logs.insert(0, f"💰 [{timestamp_atual}] [LUCRO SEGURO]: Liquidado {moeda.upper()} a ${preco:,.2f} | PNL: +${lucro:,.2f}")
                 salvar_estado_banco()
 
-        # 3. Execução de Stop Loss de Proteção
         if saldo_token > 0 and pm_token > 0:
             desvalorizacao = ((preco - pm_token) / pm_token) * 100
-            if desvalorizacao <= -stop_loss_pct:
+            if desvalorizacao <= -stop_dinamico:
                 retorno_caixa = saldo_token * preco
                 perda = (saldo_token * pm_token) - retorno_caixa
-                
-                if modo_real and api_key and api_secret:
-                    try:
-                        exchange.create_market_sell_order(par, saldo_token)
-                    except Exception as e:
-                        st.session_state.historico_logs.insert(0, f"❌ Erro API: {str(e)}")
-                
                 st.session_state.saldo_usdt += retorno_caixa
                 st.session_state.lucro_total -= perda
                 st.session_state[f"saldo_{moeda}"] = 0.0
                 st.session_state[f"preco_compra_{moeda}"] = 0.0
-                st.session_state.historico_logs.insert(0, f"🚨 [{timestamp_atual}] [STOP LOSS]: Ativado em {moeda.upper()} a ${preco:,.2f} | Perda: -${perda:,.2f}")
+                st.session_state.historico_logs.insert(0, f"🚨 [{timestamp_atual}] [STOP AUTO]: Proteção de Capital em {moeda.upper()} a ${preco:,.2f} | Perda: -${perda:,.2f}")
                 salvar_estado_banco()
 else:
     for m, p in [("btc", "BTC/USDT"), ("eth", "ETH/USDT"), ("sol", "SOL/USDT")]:
-        _, _, _, hist_precos = analisar_ativo_institucional(p)
+        _, _, _, _, _, hist_precos = analisar_mercado_autonomo(p)
         precos_reais[m] = hist_precos[-1]
         historicos_graficos[m] = hist_precos
 
 # -------------------------------------------------------------------
-# Renderização da Interface Visual (Estilo Premium Inline)
+# Renderização da Interface Visual Unificada Definitiva
 # -------------------------------------------------------------------
-st.html('<div class="brand-title">DUCK HUNTER</div>')
-st.write("")
-
 patrimonio_total = st.session_state.saldo_usdt + sum(st.session_state[f"saldo_{m}"] * precos_reais[m] for m in ["btc", "eth", "sol"])
 
 grid_html = f"""
@@ -295,7 +263,7 @@ grid_html = f"""
     <div class="panel-card">
         <div class="panel-label">🔻 PATRIMÔNIO TOTAL</div>
         <div class="panel-value" style="color: #f59e0b;">${patrimonio_total:,.2f}</div>
-        <div class="panel-subvalue">Disponível USDT: ${st.session_state.saldo_usdt:,.2f} | PNL: ${st.session_state.lucro_total:,.2f}</div>
+        <div class="panel-subvalue">Disponível USDT: ${st.session_state.saldo_usdt:,.2f} | Retorno Líquido PNL: ${st.session_state.lucro_total:,.2f}</div>
     </div>
     <div class="panel-card">
         <div class="panel-label">POSIÇÃO BITCOIN</div>
@@ -316,20 +284,20 @@ grid_html = f"""
 """
 st.html(grid_html)
 
-st.html(f'<div class="target-bar">⚡ MONITORAMENTO AUTÔNOMO ATIVO | Alvos RSI Selecionados: Compra {rsi_compra} / Venda {rsi_venda} | Proteção Stop Loss: -{stop_loss_pct}%</div>')
+st.html(f'<div class="target-bar">⚡ SYSTEM INTELLIGENCE: {status_inteligencia}</div>')
 
 # Seção de Gráficos Reativos Lado a Lado
 st.markdown("### 📊 Monitoramento Gráfico da Binance (1m)")
 g1, g2, g3 = st.columns(3)
 with g1:
     st.caption("📈 Histórico BTC/USDT")
-    st.line_chart(pd.DataFrame(historicos_graficos["btc"]), height=150, use_container_width=True)
+    st.line_chart(pd.DataFrame(historicos_graficos["btc"]), height=140, use_container_width=True)
 with g2:
     st.caption("📈 Histórico ETH/USDT")
-    st.line_chart(pd.DataFrame(historicos_graficos["eth"]), height=150, use_container_width=True)
+    st.line_chart(pd.DataFrame(historicos_graficos["eth"]), height=140, use_container_width=True)
 with g3:
     st.caption("📈 Histórico SOL/USDT")
-    st.line_chart(pd.DataFrame(historicos_graficos["sol"]), height=150, use_container_width=True)
+    st.line_chart(pd.DataFrame(historicos_graficos["sol"]), height=140, use_container_width=True)
 
 # Módulo de Exportação de Relatórios
 if st.session_state.historico_logs:
@@ -348,6 +316,6 @@ container_logs = st.container()
 with container_logs:
     for log in st.session_state.historico_logs[:20]:
         if "[COMPRA" in log: st.success(log)
-        elif "[VENDA" in log: st.info(log)
-        elif "[STOP LOSS]" in log or "🚨" in log: st.error(log)
+        elif "[LUCRO" in log: st.info(log)
+        elif "[STOP" in log or "🚨" in log: st.error(log)
         else: st.code(log)
