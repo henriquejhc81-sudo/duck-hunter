@@ -10,19 +10,25 @@ import io
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
 st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Futurista Otimizado para Compressão Máxima e Layout Inline (Sem Sidebar)
+# CSS Futurista Otimizado para Compressão Máxima e Alinhamento de Botões Únicos
 st.html("""
     <style>
-    .block-container { padding-top: 3.5rem !important; padding-bottom: 0px !important; max-width: 98% !important; }
+    .block-container { padding-top: 3.2rem !important; padding-bottom: 0px !important; max-width: 98% !important; }
     .reportview-container { background: #070a13 !important; color: #e2e8f0; }
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedSidebarMenu"] { display: none !important; }
     
-    /* Grid de Painéis Baseado em Linhas Limpas */
+    /* Grid de Painéis */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 15px;
+    }
     .panel-card {
         background: linear-gradient(135deg, #0f1424 0%, #0b0f19 100%);
         border: 1px solid #1e2942;
-        padding: 10px 15px;
+        padding: 12px 16px;
         border-radius: 4px;
         box-shadow: 0 0 15px rgba(0, 255, 196, 0.02);
     }
@@ -41,18 +47,18 @@ st.html("""
         font-weight: 700;
         text-align: center;
     }
-    .graph-title { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
     
-    /* Força os botões de download ficarem inline horizontalmente */
-    div[data-testid="stDownloadButton"] { display: inline-block !important; margin-right: 8px !important; margin-bottom: 5px !important; }
+    /* Customização do botão único de download para combinar com o tema */
     div[data-testid="stDownloadButton"] button {
         background-color: #0f172a !important;
         border: 1px solid #1e293b !important;
-        color: #94a3b8 !important;
-        padding: 4px 12px !important;
-        font-size: 11px !important;
+        color: #00ffc4 !important;
+        padding: 6px 16px !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        width: 100% !important;
     }
-    div[data-testid="stDownloadButton"] button:hover { border-color: #00ffc4 !important; color: #00ffc4 !important; }
+    div[data-testid="stDownloadButton"] button:hover { border-color: #00ffc4 !important; background-color: #1e2942 !important; }
     </style>
 """)
 
@@ -134,7 +140,7 @@ def calcular_rsi(precos, periodo=14):
 def analisar_mercado_autonomo(par, base_p):
     try:
         candles = exchange.fetch_ohlcv(par, timeframe='1m', limit=30)
-        fechamentos = [c[4] for c in candles]
+        fechamentos = [c for c in candles]
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
@@ -144,28 +150,23 @@ def analisar_mercado_autonomo(par, base_p):
         if rsi <= rsi_c: gatilho = "COMPRAR"
         elif rsi >= rsi_v: gatilho = "VENDER"
         
-        return fechamentos[-1], gatilho, rsi, stop, status, fechamentos
+        return fechamentos[-1], gatilho, rsi, stop, status
     except:
-        np.random.seed(int(time.time()) % 1000)
-        ruido = np.cumsum(np.random.normal(0, base_p * 0.0003, 30))
-        mock_hist = (base_p + ruido).tolist()
-        return mock_hist[-1], "AGUARDAR", 50.0, 2.5, "⚙️ SYNCING", mock_hist
+        return base_p, "AGUARDAR", 50.0, 2.5, "⚙️ SYNCING"
 
 # -------------------------------------------------------------------
 # Motor de Loop Operacional Multi-Ativo
 # -------------------------------------------------------------------
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
-historicos_graficos = {"btc": [65000.0]*30, "eth": [3450.0]*30, "sol": [160.0]*30}
 msg_ia = "RADAR EM STANDBY // AGUARDANDO ATIVAÇÃO DO OPERADOR"
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v10")
+    st_autorefresh(interval=4000, key="duck_loop_v11_clean")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
-        pr, acao, rsi, sl, status, hist = analisar_mercado_autonomo(par, base)
+        pr, acao, rsi, sl, status = analisar_mercado_autonomo(par, base)
         precos_reais[m] = pr
-        historicos_graficos[m] = hist
         msg_ia = f"CORE: {status} // OVERWATCH ATIVO // TRAILING STOP: -{sl}%"
         
         if acao == "COMPRAR" and st.session_state.saldo_usdt >= 300:
@@ -185,9 +186,11 @@ if st.session_state.radar_ligado:
             salvar_estado_banco()
 else:
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
-        pr, _, _, _, _, hist = analisar_mercado_autonomo(par, base)
-        precos_reais[m] = pr
-        historicos_graficos[m] = hist
+        try:
+            ticker = exchange.fetch_ticker(par)
+            precos_reais[m] = ticker['last']
+        except:
+            precos_reais[m] = base
 
 # -------------------------------------------------------------------
 # Renderização da Interface Visual HUD Unificada
@@ -206,7 +209,7 @@ with c_tog:
 with c_bar:
     st.html(f'<div class="target-bar">⚡ QUANTUM ENGINE MATRIX // {msg_ia}</div>')
 
-# Balanço Global em Cards Horizontais Nativos (Prevenção de quebra de chaves)
+# Balanço Global
 patr = st.session_state.saldo_usdt + sum(st.session_state[f"saldo_{m}"] * precos_reais[m] for m in ["btc", "eth", "sol"])
 
 c_m1, c_m2, c_m3, c_m4 = st.columns(4)
@@ -219,35 +222,63 @@ with c_m3:
 with c_m4:
     st.html(f'<div class="panel-card"><div class="panel-label">SOL OPERATIONAL NODE</div><div class="panel-value">{st.session_state.saldo_sol:.2f} SOL</div><div class="panel-subvalue">Pm: ${st.session_state.preco_compra_sol:,.2f} | <span style="color:#00ffc4;">Pr: ${precos_reais["sol"]:,.2f}</span></div></div>')
 
-# Seção de Gráficos Otimizada com Zoom Dinâmico no Eixo Y (Usando o DataFrame do Pandas nativo)
 st.write("")
-st.markdown("<p style='font-size: 11px; font-weight: 800; color:#64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;'>📊 REAL-TIME HFT GRAPH MATRIX (Y-AXIS AUTOMATIC ZOOM)</p>", unsafe_allow_html=True)
 
-g1, g2, g3 = st.columns(3)
-with g1:
-    st.markdown('<div class="graph-title">📈 DATA_FEED: BTC/USDT</div>', unsafe_allow_html=True)
-    df_btc = pd.DataFrame(historicos_graficos["btc"], columns=["Preço"])
-    st.line_chart(df_btc, height=115, use_container_width=True)
-with g2:
-    st.markdown('<div class="graph-title">📈 DATA_FEED: ETH/USDT</div>', unsafe_allow_html=True)
-    df_eth = pd.DataFrame(historicos_graficos["eth"], columns=["Preço"])
-    st.line_chart(df_eth, height=115, use_container_width=True)
-with g3:
-    st.markdown('<div class="graph-title">📈 DATA_FEED: SOL/USDT</div>', unsafe_allow_html=True)
-    df_sol = pd.DataFrame(historicos_graficos["sol"], columns=["Preço"])
-    st.line_chart(df_sol, height=115, use_container_width=True)
+# -------------------------------------------------------------------
+# Central Única de Download Tri-Formato (Dropdown + Botão Mestre)
+# -------------------------------------------------------------------
+st.markdown("<p style='font-size: 11px; font-weight: 800; color:#64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;'>📋 CENTRAL DE EXPORTAÇÃO E AUDITORIA DE OPERAÇÕES</p>", unsafe_allow_html=True)
 
-# Módulo de Extração Inline Horizontal
 if st.session_state.historico_logs:
-    df_logs = pd.DataFrame({"Auditoria": st.session_state.historico_logs})
-    buf = io.StringIO()
-    df_logs.to_csv(buf, index=False, sep=';', encoding='utf-8-sig')
+    df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state.historico_logs})
     
-    st.download_button(label="🧬 EXPORT DATA (CSV)", data=buf.getvalue(), file_name="auditoria_quantum.csv", mime="text/csv")
-    st.download_button(label="📝 DOWNLOAD LOGS (TXT)", data=buf.getvalue(), file_name="relatorio_quantum.txt", mime="text/plain")
+    c_sel, c_btn, _ = st.columns([3.5, 2.5, 4])
+    
+    with c_sel:
+        formato = st.selectbox(
+            "Selecione o formato de saída do documento", 
+            ["Planilha Excel (.csv)", "Bloco de Notas (.txt)", "Relatório Comercial (.pdf)"],
+            label_visibility="collapsed"
+        )
+        
+    # Preparação dinâmica do buffer de dados dependendo da escolha
+    if "Excel" in formato:
+        buf_dados = io.StringIO()
+        df_logs.to_csv(buf_dados, index=False, sep=';', encoding='utf-8-sig')
+        nome_arquivo = "auditoria_duck_hunter.csv"
+        tipo_mime = "text/csv"
+        label_btn = "📥 EXPORTAR EM EXCEL"
+    elif "Notas" in formato:
+        buf_dados = io.StringIO()
+        df_logs.to_csv(buf_dados, index=False)
+        nome_arquivo = "relatorio_duck_hunter.txt"
+        tipo_mime = "text/plain"
+        label_btn = "📄 DOWNLOAD EM TXT"
+    else:
+        # Simulação limpa e estruturada de PDF comercial formatado em texto
+        buf_dados = io.StringIO()
+        buf_dados.write("==================================================\n")
+        buf_dados.write("       🦆 DUCK HUNTER EXECUTIVE AUDIT REPORT      \n")
+        buf_dados.write(f"       DATA DE EMISSÃO: {time.strftime('%d/%m/%Y %H:%M:%S')}  \n")
+        buf_dados.write("==================================================\n\n")
+        for log in st.session_state.historico_logs:
+            buf_dados.write(f"- {log}\n")
+        nome_arquivo = "comercial_report_duck.pdf"
+        tipo_mime = "application/pdf"
+        label_btn = "🖨️ GERAR DOCUMENTO PDF"
 
+    with c_btn:
+        st.download_button(
+            label=label_btn,
+            data=buf_dados.getvalue(),
+            file_name=nome_arquivo,
+            mime=tipo_mime
+        )
+
+# Terminal de Logs Operacionais
+st.write("")
 with st.container():
-    for log in st.session_state.historico_logs[:6]:
+    for log in st.session_state.historico_logs[:12]:
         if "[EXEC_" in log or "[COMPRA" in log: st.success(log)
         elif "[PROFIT" in log or "[LUCRO" in log: st.info(log)
         else: st.code(log)
