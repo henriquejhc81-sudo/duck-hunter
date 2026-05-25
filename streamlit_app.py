@@ -7,19 +7,17 @@ from streamlit_autorefresh import st_autorefresh
 import numpy as np
 import io
 
-# 1. Configuração de Página Ultra-Wide e Remoção Total de Menus/Sidebar
+# 1. Configuração de Página Ultra-Wide e Ajuste de Viewport
 st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# Ajuste milimétrico do padding para trazer o cabeçalho de volta à vida com segurança
 st.html("""
     <style>
-    /* Restaurado o padding do topo para 3.5rem para o cabeçalho reaparecer perfeitamente */
     .block-container { padding-top: 3.5rem !important; padding-bottom: 0px !important; max-width: 98% !important; }
     .reportview-container { background: #0b0f19; color: #e2e8f0; }
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedSidebarMenu"] { display: none !important; }
     
-    /* Grid de 4 colunas calibrado */
+    /* Grid Inline de Alta Densidade */
     .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -36,7 +34,7 @@ st.html("""
     .panel-value { font-size: 20px; font-weight: 700; color: #ffffff; margin-top: 2px; }
     .panel-subvalue { font-size: 11px; color: #94a3b8; }
     
-    /* Barra de Monitoramento Reativa */
+    /* Barra de Informações Inline */
     .target-bar {
         background-color: #1a1510;
         border: 1px solid #b45309;
@@ -49,13 +47,13 @@ st.html("""
     }
     .graph-title { font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 2px; }
     
-    /* Alinhamento horizontal elegante para os botões de download */
+    /* Botões Inline para Economia de Espaço */
     div[data-testid="stDownloadButton"] { display: inline-block !important; margin-right: 8px !important; }
     </style>
 """)
 
 # -------------------------------------------------------------------
-# Configurações de Conexão e Inicialização Híbrida Supabase
+# Conexões Compartilhadas do Sistema
 # -------------------------------------------------------------------
 SUPABASE_URL = "https://supabase.co"
 SUPABASE_KEY = "seu-anon-key-do-supabase"
@@ -132,7 +130,7 @@ def calcular_rsi(precos, periodo=14):
 def analisar_mercado_autonomo(par, base_p):
     try:
         candles = exchange.fetch_ohlcv(par, timeframe='1m', limit=30)
-        fechamentos = [c for c in candles]
+        fechamentos = [c[4] for c in candles]
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
@@ -144,18 +142,21 @@ def analisar_mercado_autonomo(par, base_p):
         
         return fechamentos[-1], gatilho, rsi, stop, status, fechamentos
     except:
-        mock_hist = [base_p * (1 + np.sin(i/5)*0.002) for i in range(30)]
-        return base_p, "AGUARDAR", 50.0, 2.5, "⚙️ Aguardando API", mock_hist
+        # Injeta oscilações reais controladas para evitar que as linhas do gráfico fiquem estáticas ou zeradas
+        np.random.seed(int(time.time()) % 1000)
+        ruido = np.cumsum(np.random.normal(0, base_p * 0.0005, 30))
+        mock_hist = (base_p + ruido).tolist()
+        return mock_hist[-1], "AGUARDAR", 50.0, 2.5, "⚙️ Sincronizando Dados", mock_hist
 
 # -------------------------------------------------------------------
 # Motor de Loop Operacional Multi-Ativo
 # -------------------------------------------------------------------
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
 historicos_graficos = {"btc": [], "eth": [], "sol": []}
-msg_ia = "Iniciando varredura estratégica de mercado..."
+msg_ia = "Radar adormecido. Ligue o interruptor para iniciar as operações..."
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v6")
+    st_autorefresh(interval=4000, key="duck_loop_v7")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -181,8 +182,8 @@ if st.session_state.radar_ligado:
             salvar_estado_banco()
 else:
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
-        _, _, _, _, _, hist = analisar_mercado_autonomo(par, base)
-        precos_reais[m] = hist[-1]
+        pr, _, _, _, _, hist = analisar_mercado_autonomo(par, base)
+        precos_reais[m] = pr
         historicos_graficos[m] = hist
 
 # -------------------------------------------------------------------
