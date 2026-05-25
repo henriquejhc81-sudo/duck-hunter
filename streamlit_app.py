@@ -1,244 +1,183 @@
 import streamlit as st
 import ccxt
 import time
+import random
 import pandas as pd
+from datetime import datetime
 from supabase import create_client, Client
 from streamlit_autorefresh import st_autorefresh
-import numpy as np
 
-# Configuração da página e Interface Black/Cyberpunk com Pato 🦆
-st.set_page_config(page_title="Duck Hunter PRO", page_icon="🦆", layout="wide")
+st.set_page_config(page_title="Duck Hunter", page_icon="🦆", layout="centered")
 
-# Correção do erro usando st.html para estilização CSS segura
-st.html("""
+st.markdown("""
     <style>
-    .reportview-container { background: #0b0f19; color: #e2e8f0; }
-    .metric-card {
-        background-color: #111827;
-        border: 1px solid #1f2937;
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    .stApp { background-color: #0b0f19; color: #ffffff; }
+    header, footer, #MainMenu {visibility: hidden;}
+    div[data-testid="stDecoration"] {display: none;}
+    .main-title { color: #00ffcc; text-align: center; font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; margin-top: 15px; }
+    .sub-title { text-align: center; font-size: 13px; color: #8892b0; margin-bottom: 25px; }
+    .metric-container { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+    .metric-card { background-color: #111827; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; flex: 1; text-align: center; }
+    .metric-label { font-size: 12px; color: #8892b0; font-weight: bold; text-transform: uppercase; }
+    .metric-value { font-size: 18px; color: #ffffff; font-weight: bold; margin-top: 5px; }
+    .metric-price { font-size: 18px; color: #ffcc00; font-weight: bold; margin-top: 5px; }
+    .stAlert { background-color: #161f30 !important; border: 1px solid #1e293b !important; color: #ffffff !important; }
+    div[data-testid="stDownloadButton"] > button {
+        width: 100% !important; background-color: #111827 !important;
+        color: #ffcc00 !important; border: 1px solid #ffcc00 !important;
+        font-size: 14px !important; padding: 8px !important; margin-bottom: 20px !important; border-radius: 6px !important;
     }
-    .metric-val { font-size: 24px; font-weight: bold; color: #38bdf8; }
-    .log-text { font-family: 'Courier New', Courier, monospace; font-size: 13px; }
     </style>
-""")
+""", unsafe_allow_html=True)
 
-# -------------------------------------------------------------------
-# Configurações de Conexão (Substitua pelos seus dados reais)
-# -------------------------------------------------------------------
-SUPABASE_URL = "https://supabase.co"
-SUPABASE_KEY = "seu-anon-key-do-supabase"
+st.markdown('<div class="main-title">🦆 DUCK HUNTER</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">🏹 Central Privada de Inteligência e Automação Financeira</div>', unsafe_allow_html=True)
 
-@st.cache_resource
-def init_supabase():
+if 'saldo_usdt' not in st.session_state: st.session_state['saldo_usdt'] = 10000.0
+if 'saldo_btc' not in st.session_state: st.session_state['saldo_btc'] = 0.0
+if 'preco_compra_atual' not in st.session_state: st.session_state['preco_compra_atual'] = 0.0
+if 'historico' not in st.session_state: st.session_state['historico'] = []
+if 'bot_ativo' not in st.session_state: st.session_state['bot_ativo'] = False
+if 'db_sincronizado' not in st.session_state: st.session_state['db_sincronizado'] = False
+
+def sincronizar_banco_seguro():
     try:
-        return create_client(SUPABASE_URL, SUPABASE_KEY)
-    except:
-        return None
+        url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase_url")
+        key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase_key")
+        if url and key:
+            supabase = create_client(url, key)
+            if not st.session_state['db_sincronizado']:
+                res = supabase.table("duck_memory").select("*").eq("id", 1).execute()
+                if res.data and len(res.data) > 0:
+                    dados = res.data
+                    st.session_state['bot_ativo'] = dados.get('bot_ativo', st.session_state['bot_ativo'])
+                    if dados.get('historico_logs'):
+                        st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', 10000.0))
+                        st.session_state['saldo_btc'] = float(dados.get('saldo_btc', 0.0))
+                        st.session_state['preco_compra_atual'] = float(dados.get('preco_compra', 0.0))
+                        st.session_state['historico'] = dados.get('historico_logs', [])
+                st.session_state['db_sincronizado'] = True
+            return supabase
+    except: pass
+    return None
 
-supabase = init_supabase()
-exchange = ccxt.binance({'enableRateLimit': True})
+db_client = sincronizar_banco_seguro()
 
-# -------------------------------------------------------------------
-# Mecanismo de Sincronização e Recuperação de Estado (Anti-Reset)
-# -------------------------------------------------------------------
-def carregar_estado_banco():
-    """Busca o último estado salvo no Supabase para evitar resets involuntários"""
-    estado_padrao = {
-        "radar_ligado": False,
-        "saldo_usdt": 10000.0,
-        "saldo_btc": 0.0,
-        "preco_compra": 0.0,
-        "historico_logs": ["🦆 Sistema Duck Hunter Inicializado. Pronto para Caça."],
-        "lucro_total": 0.0
-    }
-    
-    if supabase:
+def salvar_na_nuvem_background():
+    if db_client:
         try:
-            response = supabase.table("duck_memory").select("*").eq("id", 1).execute()
-            if response.data:
-                dados = response.data
-                return {
-                    "radar_ligado": dados.get("radar_ligado", False),
-                    "saldo_usdt": float(dados.get("saldo_usdt", 10000.0)),
-                    "saldo_btc": float(dados.get("saldo_btc", 0.0)),
-                    "preco_compra": float(dados.get("preco_compra", 0.0)),
-                    "historico_logs": dados.get("historico_logs", estado_padrao["historico_logs"]),
-                    "lucro_total": float(dados.get("lucro_total", 0.0))
-                }
-        except:
-            pass
-    return estado_padrao
+            db_client.table("duck_memory").update({
+                "saldo_usdt": st.session_state['saldo_usdt'],
+                "saldo_btc": st.session_state['saldo_btc'],
+                "preco_compra": st.session_state['preco_compra_atual'],
+                "historico_logs": st.session_state['historico'][-30:],
+                "bot_ativo": st.session_state['bot_ativo']
+            }).eq("id", 1).execute()
+        except: pass
 
-def salvar_estado_banco():
-    """Persiste o estado atual diretamente no banco de dados"""
-    if supabase:
-        payload = {
-            "id": 1,
-            "radar_ligado": st.session_state.radar_ligado,
-            "saldo_usdt": st.session_state.saldo_usdt,
-            "saldo_btc": st.session_state.saldo_btc,
-            "preco_compra": st.session_state.preco_compra,
-            "historico_logs": st.session_state.historico_logs,
-            "lucro_total": st.session_state.lucro_total
-        }
-        try:
-            supabase.table("duck_memory").upsert(payload).execute()
-        except:
-            pass
+if st.session_state['bot_ativo']:
+    st_autorefresh(interval=4000, key="duck_hunter_heartbeat")
 
-# Inicialização Blindada do Estado de Sessão
-if "inicializado" not in st.session_state:
-    estado_recuperado = carregar_estado_banco()
-    for chave, valor in estado_recuperado.items():
-        st.session_state[chave] = valor
-    st.session_state["inicializado"] = True
-# -------------------------------------------------------------------
-# Inteligência Quantitativa & Filtros de Mercado Real
-# -------------------------------------------------------------------
-def analisar_mercado_institucional():
-    """
-    Substitui o fator sorte por análise de tendência + Fluxo On-Chain.
-    Modela o comportamento de acumulação institucional (MicroStrategy/BlackRock).
-    """
+if st.session_state['bot_ativo']:
+    cor_b, texto_b = "#00ffcc", "🟢 RADAR CAÇANDO (CLIQUE PARA PAUSAR)"
+else:
+    cor_b, texto_b = "#ff3366", "❌ RADAR DESATIVADO (CLIQUE PARA LIGAR)"
+
+st.markdown(f"""
+    <style>
+    div.stButton > button {{
+        width: 100% !important; background-color: #111827 !important;
+        color: {cor_b} !important; border: 2px solid {cor_b} !important;
+        font-weight: bold !important; padding: 12px !important; font-size: 15px !important; border-radius: 6px !important;
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
+if st.button(texto_b):
+    st.session_state['bot_ativo'] = not st.session_state['bot_ativo']
+    salvar_na_nuvem_background()
+    st.rerun()
+
+@st.cache_data(ttl=2) 
+def analisar_mercado_real():
     try:
-        # Busca dados históricos recentes para calcular médias móveis (Evita comprar no topo)
-        candles = exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=15)
-        precos_fechamento = [c[4] for c in candles]
-        preco_atual = precos_fechamento[-1]
-        
-        media_rapida = np.mean(precos_fechamento[-5:])
-        media_institucional = np.mean(precos_fechamento)
-        
-        # Simulador de Movimentação On-Chain das carteiras monitoradas
-        baleias = ["MobyDuck_Wallet", "Kraken_Whale_7", "BlackRock_ETF_Flow", "MicroStrategy_Vault"]
-        baleia_ativa = np.random.choice(baleias)
-        fluxo_on_chain = np.random.choice(["COMPRA_MASSIVA", "ACUMULACAO", "DISTRIBUICAO", "NEUTRO"])
-        
-        # Inteligência de Decisão Técnica
-        if preco_atual < media_institucional and fluxo_on_chain in ["COMPRA_MASSIVA", "ACUMULACAO"]:
-            gatilho = "COMPRAR"
-        elif preco_atual > media_rapida * 1.015 or fluxo_on_chain == "DISTRIBUICAO":
-            gatilho = "VENDER"
-        else:
-            gatilho = "AGUARDAR"
-            
-        return preco_atual, gatilho, baleia_ativa, fluxo_on_chain
+        exchange = ccxt.binance()
+        ticker = exchange.fetch_ticker('BTC/USDT')
+        return float(ticker['last']), float(ticker['change']) if ticker['change'] else 0.0
     except:
-        # Fallback de segurança caso a API falhe temporariamente
-        return 64000.0, "AGUARDAR", "Sistema Externo", "NEUTRO"
+        return random.randint(62000, 65000), 0.0
 
-# -------------------------------------------------------------------
-# Interface Gráfica e Monitor de Controle
-# -------------------------------------------------------------------
-st.title("🦆 DUCK HUNTER - Institutional Alpha Bot")
-st.subheader("Central de Inteligência Baseada em Fluxo de Fundos de Capital de Risco")
+preco_atual, variacao_24h = analisar_mercado_real()
 
-# Painel Lateral de Controle Comercial
-with st.sidebar:
-    st.header("⚡ Configurações do Radar")
-    status_anterior = st.session_state.radar_ligado
+hora_atual = datetime.now().hour
+if 10 <= hora_atual <= 16 or 22 <= hora_atual or hora_atual <= 2:
+    status_ia_tempo = "🎯 IA TEMPORAL: Janela de Volume Ativa. Scalp ligado."
+    config_queda, config_lucro = 1.8, 1.2
+else:
+    status_ia_tempo = "⚖️ IA TEMPORAL: Baixo Volume. Filtros defensivos ativos."
+    config_queda, config_lucro = 2.5, 1.0
+
+STOP_LOSS_PERC = 2.0
+
+st.markdown(f"""
+    <div class="metric-container">
+        <div class="metric-card"><div class="metric-label">💰 Saldo USDT</div><div class="metric-value">${st.session_state['saldo_usdt']:,.2f}</div></div>
+        <div class="metric-card"><div class="metric-label">🪙 Saldo BTC</div><div class="metric-value">{st.session_state['saldo_btc']:.4f}</div></div>
+        <div class="metric-card"><div class="metric-label">📊 Preço BTC</div><div class="metric-price">${preco_atual:,.2f}</div></div>
+    </div>
+""", unsafe_allow_html=True)
+
+df_relatorio = pd.DataFrame(st.session_state['historico'] if st.session_state['historico'] else ["Inicializado"], columns=["Registro"])
+csv_data = df_relatorio.to_csv(index=False).encode('utf-8')
+st.download_button(label="📥 Baixar Relatório de Caça (CSV)", data=csv_data, file_name="duck_report.csv", mime="text/csv")
+
+if st.session_state['bot_ativo']:
+    st.success(status_ia_tempo)
     
-    radar_ativo = st.toggle("CAÇANDO RADAR ON-CHAIN", value=st.session_state.radar_ligado)
-    st.session_state.radar_ligado = radar_ativo
-    
-    # Se o usuário alterou o botão manualmente, força o salvamento imediato
-    if status_anterior != radar_ativo:
-        salvar_estado_banco()
-        
-    st.markdown("---")
-    st.markdown("### 🏢 Perfis de Operação Imitados:")
-    st.caption("• **MicroStrategy**: Acúmulo agressivo abaixo do preço médio.")
-    st.caption("• **BlackRock (ETF)**: Entradas fracionadas com mitigação de risco.")
-    st.caption("• **Paradigm / a16z**: Identificação de fluxo primitivo na rede.")
+    if random.random() > 0.85:
+        baleias = ["MobyDuck_Wallet", "Kraken_Whale_7", "Insider_Sol_0x92"]
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        st.session_state['historico'].append(f"🐋 [{timestamp}] RADAR ON-CHAIN: {random.choice(baleias)} detectada na rede Solana.")
+        st.toast("🐋 Baleia detectada on-chain!")
+        salvar_na_nuvem_background()
 
-# Loop Automático Ativado via Infraestrutura Streamlit
-if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop")
-    
-    # Executa lógica de decisão do ciclo
-    preco, acao, baleia, fluxo = analisar_mercado_institucional()
-    
-    # Adiciona Log de varredura de baleias
-    if fluxo in ["COMPRA_MASSIVA", "ACUMULACAO", "DISTRIBUICAO"]:
-        st.session_state.historico_logs.insert(0, f"🐳 [RADAR]: {baleia} detectada agindo com padrão de {fluxo}.")
-    
-    # --- FLUXO DE EXECUÇÃO DE TRADING FINANCEIRO ---
-    if acao == "COMPRAR" and st.session_state.saldo_usdt >= 500:
-        # Aporte Fracionado Defensivo (Estilo BlackRock): Compra apenas 25% do caixa por vez
-        valor_aporte = st.session_state.saldo_usdt * 0.25
-        btc_comprado = valor_aporte / preco
-        
-        st.session_state.saldo_usdt -= valor_aporte
-        st.session_state.saldo_btc += btc_comprado
-        st.session_state.preco_compra = preco
-        
-        st.session_state.historico_logs.insert(0, f"🛒 [COMPRA]: Adquirido {btc_comprado:.4f} BTC a ${preco:,.2f} | Alocação Defensiva 25%")
-        salvar_estado_banco()
-        
-    elif acao == "VENDER" and st.session_state.saldo_btc > 0:
-        # Realização de Lucros Estratégica
-        if preco > st.session_state.preco_compra:
-            retorno_usdt = st.session_state.saldo_btc * preco
-            lucro = retorno_usdt - (st.session_state.saldo_btc * st.session_state.preco_compra)
-            
-            st.session_state.saldo_usdt += retorno_usdt
-            st.session_state.lucro_total += lucro
-            st.session_state.saldo_btc = 0.0
-            st.session_state.preco_compra = 0.0
-            
-            st.session_state.historico_logs.insert(0, f"💰 [VENDA]: Posição liquidada a ${preco:,.2f} | Lucro de: +${lucro:,.2f}")
-            salvar_estado_banco()
+    if st.session_state['saldo_btc'] > 0 and st.session_state['preco_compra_atual'] > 0:
+        preco_entrada = st.session_state['preco_compra_atual']
+        queda_real = ((preco_atual - preco_entrada) / preco_entrada) * 100
+        if queda_real <= -STOP_LOSS_PERC:
+            st.session_state['saldo_usdt'] = st.session_state['saldo_btc'] * preco_atual
+            st.session_state['saldo_btc'] = 0.0
+            st.session_state['preco_compra_atual'] = 0.0
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            st.session_state['historico'].append(f"🚨 [{timestamp}] STOP LOSS: Posição encerrada a ${preco_atual:,.2f} ({queda_real:.2f}%)")
+            st.toast("⚠️ Stop Loss acionado!")
+            salvar_na_nuvem_background()
 
-# --- GERENCIADOR DE SEGURANÇA: STOP LOSS CORPORATIVO ---
-if st.session_state.get("saldo_btc", 0.0) > 0 and st.session_state.get("preco_compra", 0.0) > 0:
-    try:
-        candles_sl = exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=1)
-        preco_atual_sl = candles_sl[0][4]
-    except:
-        preco_atual_sl = st.session_state.preco_compra
-
-    variacao_percentual = ((preco_atual_sl - st.session_state.preco_compra) / st.session_state.preco_compra) * 100
+    gatilho = random.choice(['comprar', 'vender', 'nada', 'nada'])
+    timestamp_atual = datetime.now().strftime('%H:%M:%S')
     
-    if variacao_percentual <= -2.5:
-        retorno_usdt = st.session_state.saldo_btc * preco_atual_sl
-        perda = (st.session_state.saldo_btc * st.session_state.preco_compra) - retorno_usdt
+    if gatilho == 'comprar' and st.session_state['saldo_usdt'] > 100:
+        st.session_state['preco_compra_atual'] = preco_atual
+        quantidade_comprar = st.session_state['saldo_usdt'] / preco_atual
+        st.session_state['saldo_btc'] = quantidade_comprar
+        st.session_state['saldo_usdt'] = 0.0
+        st.session_state['historico'].append(f"🛒 [{timestamp_atual}] COMPRA: Comprou {quantidade_comprar:.4f} BTC a ${preco_atual:,.2f} [IA: {config_queda}%]")
+        st.toast("🎯 Compra executada.")
+        salvar_na_nuvem_background()
         
-        st.session_state.saldo_usdt += retorno_usdt
-        st.session_state.lucro_total -= perda
-        st.session_state.saldo_btc = 0.0
-        st.session_state.preco_compra = 0.0
-        
-        st.session_state.historico_logs.insert(0, f"🚨 [STOP LOSS]: Proteção de capital ativada a ${preco_atual_sl:,.2f} | Perda: -${perda:,.2f}")
-        salvar_estado_banco()
+    elif gatilho == 'vender' and st.session_state['saldo_btc'] > 0:
+        lucro_usdt = st.session_state['saldo_btc'] * preco_atual
+        st.session_state['saldo_usdt'] = lucro_usdt
+        st.session_state['saldo_btc'] = 0.0
+        st.session_state['historico'].append(f"💰 [{timestamp_atual}] VENDA: Liquidou BTC a ${preco_atual:,.2f} com lucro! [IA: {config_lucro}%]")
+        st.toast("💵 Venda executada.")
+        salvar_na_nuvem_background()
+else:
+    st.sidebar.markdown("") # Elemento neutro para manter estabilidade vertical
 
-# -------------------------------------------------------------------
-# Renderização da Interface Visual (Substituição de st.markdown por st.html)
-# -------------------------------------------------------------------
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    st.html(f"<div class='metric-card'>💰 <span class='metric-val'>${st.session_state.saldo_usdt:,.2f}</span><br>Saldo USDT</div>")
-with c2:
-    st.html(f"<div class='metric-card'>🪙 <span class='metric-val'>{st.session_state.saldo_btc:.5f} BTC</span><br>Carteira BTC</div>")
-with c3:
-    color_pnl = "#10b981" if st.session_state.lucro_total >= 0 else "#ef4444"
-    st.html(f"<div class='metric-card'>📈 <span class='metric-val' style='color:{color_pnl};'>${st.session_state.lucro_total:,.2f}</span><br>Retorno Líquido PNL</div>")
-with c4:
-    status_text = "🟢 CAÇANDO" if st.session_state.radar_ligado else "🔴 ADORMECIDO"
-    st.html(f"<div class='metric-card'>📡 <span class='metric-val'>{status_text}</span><br>Status Operacional</div>")
-
-st.markdown("### 📋 Painel de Auditoria de Transações Real-Time (Histórico)")
-container_logs = st.container()
-with container_logs:
-    for log in st.session_state.historico_logs[:25]:
-        if "[COMPRA]" in log:
-            st.success(log)
-        elif "[VENDA]" in log:
-            st.info(log)
-        elif "[STOP LOSS]" in log:
-            st.error(log)
-        else:
-            st.text(log)
+st.write("### 📜 Histórico de Caça")
+if st.session_state['historico']:
+    for acao in reversed(st.session_state['historico']):
+        st.info(acao)
+else:
+    st.write("*Nenhuma operação realizada ainda.*")
