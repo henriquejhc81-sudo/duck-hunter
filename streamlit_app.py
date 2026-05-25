@@ -10,11 +10,11 @@ import io
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
 st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Premium Terminal Quantum - Sem Ícone Superior e Margens Ajustadas
+# CSS Premium Terminal Quantum - Margem do topo aumentada para não cortar
 st.html("""
     <style>
     .block-container { 
-        padding-top: 3.5rem !important; 
+        padding-top: 4.5rem !important; 
         padding-bottom: 2rem !important; 
         max-width: 96% !important;
     }
@@ -24,7 +24,7 @@ st.html("""
     
     /* Cabeçalho Limpo Corporativo */
     .brand-header {
-        font-size: 24px; 
+        font-size: 21px; 
         font-weight: 900; 
         color: #00ffc4; 
         font-family: 'Courier New', monospace; 
@@ -32,7 +32,7 @@ st.html("""
         text-shadow: 0 0 12px rgba(0, 255, 196, 0.4);
     }
     
-    /* Grid de Painéis */
+    /* Grid de Painéis Horizontais */
     .dashboard-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -51,7 +51,7 @@ st.html("""
     .panel-value { font-size: 23px; font-weight: bold; color: #ffffff; margin-top: 2px; font-family: 'Courier New', monospace; }
     .panel-subvalue { font-size: 11px; color: #94a3b8; margin-top: 2px; }
     
-    /* HUD de Mensagens da IA */
+    /* HUD de Mensagens da IA Dourado/Azul */
     .target-bar {
         background-color: #0c1524;
         border: 1px solid #1d4ed8;
@@ -64,7 +64,7 @@ st.html("""
         letter-spacing: 0.5px;
     }
     
-    /* Caixa do Terminal Quantum */
+    /* Caixa do Terminal Limpa */
     .terminal-box {
         background: #03050a !important;
         border: 1px solid #1e293b !important;
@@ -79,7 +79,7 @@ st.html("""
         box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
     }
     
-    /* Ajuste para alinhar os elementos de download frontalmente na mesma linha */
+    /* Alinhamento Frontal dos botões */
     div[data-testid="stDownloadButton"] button {
         background-color: #0c1524 !important;
         border: 1px solid #00ffc4 !important;
@@ -89,7 +89,6 @@ st.html("""
         font-weight: bold !important;
         border-radius: 4px !important;
         width: 100% !important;
-        text-shadow: 0 0 5px rgba(0, 255, 196, 0.2);
     }
     div[data-testid="stDownloadButton"] button:hover { background-color: #00ffc4 !important; color: #060913 !important; }
     </style>
@@ -116,7 +115,7 @@ def carregar_estado_banco():
         "saldo_btc": 0.0, "preco_compra_btc": 0.0,
         "saldo_eth": 0.0, "preco_compra_eth": 0.0,
         "saldo_sol": 0.0, "preco_compra_sol": 0.0,
-        "historico_logs": ["🦆 Duck Hunter Caçador de Oportunidades Inicializado."],
+        "historico_logs": [],
         "lucro_total": 0.0
     }
     if supabase:
@@ -173,7 +172,7 @@ def calcular_rsi(precos, periodo=14):
 def analisar_mercado_autonomo(par, base_p):
     try:
         candles = exchange.fetch_ohlcv(par, timeframe='1m', limit=30)
-        fechamentos = [c[4] for c in candles]
+        fechamentos = [c for c in candles]
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
@@ -188,19 +187,19 @@ def analisar_mercado_autonomo(par, base_p):
         return base_p, "AGUARDAR", 50.0, 2.5, "⚙️ SYNCING"
 
 # -------------------------------------------------------------------
-# Motor de Loop Operacional Multi-Ativo
+# Motor de Loop Operacional Multi-Ativo e Definição de Mensagens
 # -------------------------------------------------------------------
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
-msg_ia = "RADAR EM STANDBY // AGUARDANDO ATIVAÇÃO DO OPERADOR"
 
 if st.session_state.radar_ligado:
-    st_autorefresh(interval=4000, key="duck_loop_v14_final")
+    st_autorefresh(interval=4000, key="duck_loop_v15_final")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
         pr, acao, rsi, sl, status = analisar_mercado_autonomo(par, base)
         precos_reais[m] = pr
-        msg_ia = f"CORE: {status} // OVERWATCH ATIVO // TRAILING STOP: -{sl}%"
+        # Altera dinamicamente para indicar o status de caça ativa
+        msg_ia = f"🦅 CAÇANDO ATIVOS INTEGRADOS // {status} // TRAILING STOP: -{sl}%"
         
         if acao == "COMPRAR" and st.session_state.saldo_usdt >= 300:
             aloc = st.session_state.saldo_usdt * 0.20
@@ -218,6 +217,8 @@ if st.session_state.radar_ligado:
             st.session_state.historico_logs.insert(0, f"💰 [{t_atual}] [PROFIT]: {m.upper()} liquidado | Lucro: +${lucro:,.2f}")
             salvar_estado_banco()
 else:
+    # Estado limpo solicitado quando o radar estiver desligado
+    msg_ia = "RADAR EM STANDBY // MOTOR INTEGRADO"
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
         try:
             ticker = exchange.fetch_ticker(par)
@@ -262,56 +263,55 @@ st.write("")
 # -------------------------------------------------------------------
 st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; margin-bottom: 2px;'>📋 CENTRAL DE EXPORTAÇÃO E AUDITORIA DE OPERAÇÕES</p>", unsafe_allow_html=True)
 
-if st.session_state.historico_logs:
-    df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state.historico_logs})
-    
-    # Grid de 3 colunas para colocar o Dropdown e o Botão perfeitamente na frente
-    c_sel, c_btn, _ = st.columns([4.0, 3.0, 3.0])
-    
-    with c_sel:
-        formato = st.selectbox(
-            "Selecione o formato de saída do documento", 
-            ["Planilha Excel (.csv)", "Bloco de Notas (.txt)", "Relatório Comercial (.pdf)"],
-            label_visibility="collapsed"
-        )
-        
-    if "Excel" in formato:
-        buf_dados = io.StringIO()
-        df_logs.to_csv(buf_dados, index=False, sep=';', encoding='utf-8-sig')
-        nome_arquivo = "auditoria_duck_hunter.csv"
-        tipo_mime = "text/csv"
-        label_btn = "📥 EXPORTAR EM EXCEL"
-    elif "Notas" in formato:
-        buf_dados = io.StringIO()
-        df_logs.to_csv(buf_dados, index=False)
-        nome_arquivo = "relatorio_duck_hunter.txt"
-        tipo_mime = "text/plain"
-        label_btn = "📄 DOWNLOAD EM TXT"
-    else:
-        buf_dados = io.StringIO()
-        buf_dados.write("==================================================\n")
-        buf_dados.write("            DUCK HUNTER EXECUTIVE REPORT          \n")
-        buf_dados.write(f"       EMISSÃO: {time.strftime('%d/%m/%Y %H:%M:%S')}  \n")
-        buf_dados.write("==================================================\n\n")
-        for log in st.session_state.historico_logs:
-            buf_dados.write(f"- {log}\n")
-        nome_arquivo = "report_duck.pdf"
-        tipo_mime = "application/pdf"
-        label_btn = "🖨️ GERAR DOCUMENTO PDF"
+df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state.historico_logs if st.session_state.historico_logs else ["Nenhum registro ainda."]})
 
-    with c_btn:
-        st.download_button(label=label_btn, data=buf_dados.getvalue(), file_name=nome_arquivo, mime=tipo_mime)
+# Grid frontalizado
+c_sel, c_btn, _ = st.columns([4.0, 3.0, 3.0])
+
+with c_sel:
+    formato = st.selectbox(
+        "Selecione o formato de saída do documento", 
+        ["Planilha Excel (.csv)", "Bloco de Notas (.txt)", "Relatório Comercial (.pdf)"],
+        label_visibility="collapsed"
+    )
+    
+if "Excel" in formato:
+    buf_dados = io.StringIO()
+    df_logs.to_csv(buf_dados, index=False, sep=';', encoding='utf-8-sig')
+    nome_arquivo = "auditoria_duck_hunter.csv"
+    tipo_mime = "text/csv"
+    label_btn = "📥 EXPORTAR EM EXCEL"
+elif "Notas" in formato:
+    buf_dados = io.StringIO()
+    df_logs.to_csv(buf_dados, index=False)
+    nome_arquivo = "relatorio_duck_hunter.txt"
+    tipo_mime = "text/plain"
+    label_btn = "📄 DOWNLOAD EM TXT"
+else:
+    buf_dados = io.StringIO()
+    buf_dados.write("==================================================\n")
+    buf_dados.write("            DUCK HUNTER EXECUTIVE REPORT          \n")
+    buf_dados.write("==================================================\n\n")
+    for log in st.session_state.historico_logs:
+        buf_dados.write(f"- {log}\n")
+    nome_arquivo = "report_duck.pdf"
+    tipo_mime = "application/pdf"
+    label_btn = "🖨️ GERAR DOCUMENTO PDF"
+
+with c_btn:
+    st.download_button(label=label_btn, data=buf_dados.getvalue(), file_name=nome_arquivo, mime=tipo_mime)
 
 # Terminal Real-Time com o novo título de texto limpo solicitado
 st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; margin-bottom: 2px;'>DUCK HUNTER CAÇADOR DE OPORTUNIDADES INICIALIZADO</p>", unsafe_allow_html=True)
 
 terminal_content = ""
-for log in st.session_state.historico_logs[:20]:
-    if "[EXEC_" in log or "[COMPRA" in log:
-        terminal_content += f"<div style='color: #00ffc4; font-weight: bold; margin-bottom: 4px;'>{log}</div>"
-    elif "[PROFIT" in log or "[LUCRO" in log:
-        terminal_content += f"<div style='color: #38bdf8; font-weight: bold; margin-bottom: 4px;'>{log}</div>"
-    else:
-        terminal_content += f"<div style='color: #64748b; margin-bottom: 4px;'>{log}</div>"
+if st.session_state.historico_logs:
+    for log in st.session_state.historico_logs[:20]:
+        if "[EXEC_" in log or "[COMPRA" in log:
+            terminal_content += f"<div style='color: #00ffc4; font-weight: bold; margin-bottom: 4px;'>{log}</div>"
+        elif "[PROFIT" in log or "[LUCRO" in log:
+            terminal_content += f"<div style='color: #38bdf8; font-weight: bold; margin-bottom: 4px;'>{log}</div>"
+        else:
+            terminal_content += f"<div style='color: #64748b; margin-bottom: 4px;'>{log}</div>"
 
 st.html(f'<div class="terminal-box">{terminal_content}</div>')
