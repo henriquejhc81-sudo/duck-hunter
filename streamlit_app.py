@@ -205,17 +205,17 @@ else:
 st.html('<div class="brand-title">DUCK HUNTER</div>')
 
 # Linha de Botões de Controle Superior
-col_btn1, _ = st.columns([4, 8])
-with col_btn1:
-    status_anterior = st.session_state.radar_ligado
-    label_radar = "🟢 RADAR MULTI-ATIVO ATIVO" if st.session_state.radar_ligado else "🔴 RADAR ADORMECIDO"
-    radar_ativo = st.toggle(label_radar, value=st.session_state.radar_ligado)
-    if status_anterior != radar_ativo:
-        st.session_state.radar_ligado = radar_ativo
-        salvar_estado_banco()
-        st.rerun()
+status_anterior = st.session_state.radar_ligado
+label_radar = "🟢 RADAR MULTI-ATIVO ATIVO" if st.session_state.radar_ligado else "🔴 RADAR ADORMECIDO"
+radar_ativo = st.toggle(label_radar, value=st.session_state.radar_ligado)
 
-st.markdown("<br>", unsafe_allowed_html=True)
+if status_anterior != radar_ativo:
+    st.session_state.radar_ligado = radar_ativo
+    salvar_estado_banco()
+    st.rerun()
+
+# Espaçamento Limpo Padrão Streamlit (Evita quebra por HTML)
+st.write("")
 
 # Grid de Painéis Horizontais Inline (Idêntico ao Layout SARA_FIREBOLT)
 grid_html = f"""
@@ -269,7 +269,7 @@ if st.session_state.historico_logs:
             mime="text/plain"
         )
 
-st.markdown("<br>", unsafe_allowed_html=True)
+st.write("")
 
 # Renderizador de Terminais Reativos
 container_logs = st.container()
