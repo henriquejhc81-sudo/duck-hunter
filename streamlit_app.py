@@ -221,35 +221,34 @@ st.markdown("---")
 st.markdown("### 📋 Painel de Auditoria de Transações Real-Time (Histórico)")
 
 # -------------------------------------------------------------------
-# Geração e Exportação de Relatórios (Excel e PDF Simples)
+# Geração e Exportação de Relatórios Seguros (Sem dependência de openpyxl)
 # -------------------------------------------------------------------
 if st.session_state.historico_logs:
     df_logs = pd.DataFrame({"Registro de Auditoria / Operação": st.session_state.historico_logs})
     
     col_exp1, col_exp2, _ = st.columns([1, 1, 4])
     
-    # Exportador Excel
-    buffer_excel = io.BytesIO()
-    with pd.ExcelWriter(buffer_excel, engine='openpyxl') as writer:
-        df_logs.to_excel(writer, index=False, sheet_name='Logs_Duck_Hunter')
+    # Exportador compatível com Excel via CSV estruturado
+    buffer_csv = io.StringIO()
+    df_logs.to_csv(buffer_csv, index=False, sep=';', encoding='utf-8-sig')
     
     with col_exp1:
         st.download_button(
-            label="📥 Baixar Excel (.xlsx)",
-            data=buffer_excel.getvalue(),
-            file_name="relatorio_duck_hunter.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            label="📥 Baixar Excel (.xlsx/.csv)",
+            data=buffer_csv.getvalue(),
+            file_name="relatorio_duck_hunter.csv",
+            mime="text/csv"
         )
         
-    # Exportador PDF formatado via arquivo de texto estruturado para Streamlit
-    buffer_pdf = io.StringIO()
-    df_logs.to_csv(buffer_pdf, index=False)
+    # Exportador estruturado de texto para simulação limpa de PDF
+    buffer_txt = io.StringIO()
+    df_logs.to_csv(buffer_txt, index=False)
     
     with col_exp2:
         st.download_button(
             label="📄 Baixar Relatório (PDF/TXT)",
-            data=buffer_pdf.getvalue(),
-            file_name="relatorio_duck_hunter.pdf",
+            data=buffer_txt.getvalue(),
+            file_name="relatorio_duck_hunter.txt",
             mime="text/plain" 
         )
 
