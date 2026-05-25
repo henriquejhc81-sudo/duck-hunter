@@ -195,7 +195,6 @@ if st.session_state.radar_ligado:
 
 # --- GERENCIADOR DE SEGURANÇA: STOP LOSS CORPORATIVO ---
 if st.session_state.get("saldo_btc", 0.0) > 0 and st.session_state.get("preco_compra", 0.0) > 0:
-    # Vinculado ao preço obtido na varredura do ciclo ativo
     try:
         candles_sl = exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=1)
         preco_atual_sl = candles_sl[0][4]
@@ -204,7 +203,6 @@ if st.session_state.get("saldo_btc", 0.0) > 0 and st.session_state.get("preco_co
 
     variacao_percentual = ((preco_atual_sl - st.session_state.preco_compra) / st.session_state.preco_compra) * 100
     
-    # Stop loss agressivo ajustado para -2.5% para preservar o patrimônio corporativo
     if variacao_percentual <= -2.5:
         retorno_usdt = st.session_state.saldo_btc * preco_atual_sl
         perda = (st.session_state.saldo_btc * st.session_state.preco_compra) - retorno_usdt
@@ -218,24 +216,24 @@ if st.session_state.get("saldo_btc", 0.0) > 0 and st.session_state.get("preco_co
         salvar_estado_banco()
 
 # -------------------------------------------------------------------
-# Renderização da Interface Visual (Painel de Métricas Atualizado)
+# Renderização da Interface Visual (Substituição de st.markdown por st.html)
 # -------------------------------------------------------------------
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.markdown(f"<div class='metric-card'>💰 <span class='metric-val'>${st.session_state.saldo_usdt:,.2f}</span><br>Saldo USDT</div>", unsafe_allowed_html=True)
+    st.html(f"<div class='metric-card'>💰 <span class='metric-val'>${st.session_state.saldo_usdt:,.2f}</span><br>Saldo USDT</div>")
 with c2:
-    st.markdown(f"<div class='metric-card'>🪙 <span class='metric-val'>{st.session_state.saldo_btc:.5f} BTC</span><br>Carteira BTC</div>", unsafe_allowed_html=True)
+    st.html(f"<div class='metric-card'>🪙 <span class='metric-val'>{st.session_state.saldo_btc:.5f} BTC</span><br>Carteira BTC</div>")
 with c3:
     color_pnl = "#10b981" if st.session_state.lucro_total >= 0 else "#ef4444"
-    st.markdown(f"<div class='metric-card'>📈 <span class='metric-val' style='color:{color_pnl};'>${st.session_state.lucro_total:,.2f}</span><br>Retorno Líquido PNL</div>", unsafe_allowed_html=True)
+    st.html(f"<div class='metric-card'>📈 <span class='metric-val' style='color:{color_pnl};'>${st.session_state.lucro_total:,.2f}</span><br>Retorno Líquido PNL</div>")
 with c4:
     status_text = "🟢 CAÇANDO" if st.session_state.radar_ligado else "🔴 ADORMECIDO"
-    st.markdown(f"<div class='metric-card'>📡 <span class='metric-val'>{status_text}</span><br>Status Operacional</div>", unsafe_allowed_html=True)
+    st.html(f"<div class='metric-card'>📡 <span class='metric-val'>{status_text}</span><br>Status Operacional</div>")
 
 st.markdown("### 📋 Painel de Auditoria de Transações Real-Time (Histórico)")
 container_logs = st.container()
 with container_logs:
-    for log in st.session_state.historico_logs[:25]:  # Exibe as 25 ações mais relevantes
+    for log in st.session_state.historico_logs[:25]:
         if "[COMPRA]" in log:
             st.success(log)
         elif "[VENDA]" in log:
