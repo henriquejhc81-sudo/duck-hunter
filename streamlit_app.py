@@ -10,7 +10,7 @@ import io
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
 st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS Premium Terminal Quantum - Sem Ícones e Margem Superior Ajustada
+# CSS Premium Terminal Quantum - Margens Fixas e Visual HFT
 st.html("""
     <style>
     .block-container { 
@@ -95,34 +95,8 @@ st.html("""
 """)
 
 # -------------------------------------------------------------------
-# Mecanismo de Sincronização Segura via Secrets (Herdado do PDF)
+# Inicialização Isolada de Memória Local
 # -------------------------------------------------------------------
-def sincronizar_banco_seguro():
-    try:
-        url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase_url")
-        key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase_key")
-        if url and key:
-            db_client = create_client(url, key)
-            if not st.session_state.get('db_sincronizado', False):
-                res = db_client.table("duck_memory").select("*").eq("id", 1).execute()
-                if res.data and len(res.data) > 0:
-                    dados = res.data[0]
-                    st.session_state['bot_ativo'] = dados.get('bot_ativo', False)
-                    st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', 10000.0))
-                    st.session_state['saldo_btc'] = float(dados.get('saldo_btc', 0.0))
-                    st.session_state['preco_compra_btc'] = float(dados.get('preco_compra_btc', 0.0))
-                    st.session_state['saldo_eth'] = float(dados.get('saldo_eth', 0.0))
-                    st.session_state['preco_compra_eth'] = float(dados.get('preco_compra_eth', 0.0))
-                    st.session_state['saldo_sol'] = float(dados.get('saldo_sol', 0.0))
-                    st.session_state['preco_compra_sol'] = float(dados.get('preco_compra_sol', 0.0))
-                    st.session_state['historico'] = dados.get('historico_logs', [])
-                    st.session_state['lucro_total'] = float(dados.get('lucro_total', 0.0))
-                    st.session_state['db_sincronizado'] = True
-            return db_client
-    except: pass
-    return None
-
-# Inicialização Base de Estados de Memória Coerentes com o PDF
 if 'saldo_usdt' not in st.session_state: st.session_state['saldo_usdt'] = 10000.0
 if 'saldo_btc' not in st.session_state: st.session_state['saldo_btc'] = 0.0
 if 'preco_compra_btc' not in st.session_state: st.session_state['preco_compra_btc'] = 0.0
@@ -133,9 +107,39 @@ if 'preco_compra_sol' not in st.session_state: st.session_state['preco_compra_so
 if 'historico' not in st.session_state: st.session_state['historico'] = []
 if 'bot_ativo' not in st.session_state: st.session_state['bot_ativo'] = False
 if 'lucro_total' not in st.session_state: st.session_state['lucro_total'] = 0.0
+if 'db_sincronizado' not in st.session_state: st.session_state['db_sincronizado'] = False
 
-db_client = sincronizar_banco_seguro()
+# -------------------------------------------------------------------
+# Conexão de Dados e Sincronização Unidirecional Inicial
+# -------------------------------------------------------------------
+SUPABASE_URL = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase_url")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase_key")
+
+@st.cache_resource
+def init_supabase():
+    try: return create_client(SUPABASE_URL, SUPABASE_KEY)
+    except: return None
+
+db_client = init_supabase()
 exchange = ccxt.binance({'enableRateLimit': True})
+
+if db_client and not st.session_state['db_sincronizado']:
+    try:
+        res = db_client.table("duck_memory").select("*").eq("id", 1).execute()
+        if res.data and len(res.data) > 0:
+            dados = res.data[0]
+            st.session_state['bot_ativo'] = dados.get('bot_ativo', False)
+            st.session_state['saldo_usdt'] = float(dados.get('saldo_usdt', 10000.0))
+            st.session_state['saldo_btc'] = float(dados.get('saldo_btc', 0.0))
+            st.session_state['preco_compra_btc'] = float(dados.get('preco_compra_btc', 0.0))
+            st.session_state['saldo_eth'] = float(dados.get('saldo_eth', 0.0))
+            st.session_state['preco_compra_eth'] = float(dados.get('preco_compra_eth', 0.0))
+            st.session_state['saldo_sol'] = float(dados.get('saldo_sol', 0.0))
+            st.session_state['preco_compra_sol'] = float(dados.get('preco_compra_sol', 0.0))
+            st.session_state['historico'] = dados.get('historico_logs', [])
+            st.session_state['lucro_total'] = float(dados.get('lucro_total', 0.0))
+            st.session_state['db_sincronizado'] = True
+    except: pass
 
 def salvar_na_nuvem_background():
     if db_client:
@@ -175,7 +179,6 @@ def analisar_mercado_autonomo(par, base_p):
         vola = np.std(np.diff(fechamentos) / fechamentos[:-1]) * 100
         rsi = calcular_rsi(fechamentos, 14)
         
-        # Inteligência Temporal Dinâmica Integrada (Inspirada no seu código original)
         rsi_c, rsi_v, stop, status = (32, 68, 1.8, "🛡️ MODO PROTEÇÃO") if vola > 0.15 else (40, 60, 2.5, "🔥 CAÇA LUCRO")
         
         gatilho = "AGUARDAR"
@@ -187,13 +190,12 @@ def analisar_mercado_autonomo(par, base_p):
         return base_p, "AGUARDAR", 50.0, 2.5, "⚙️ SYNCING"
 
 # -------------------------------------------------------------------
-# Motor de Loop Operacional Multi-Ativo Estável
+# Motor de Loop Operacional Multi-Ativo e Definição de Mensagens
 # -------------------------------------------------------------------
 precos_reais = {"btc": 65000.0, "eth": 3450.0, "sol": 160.0}
 
 if st.session_state['bot_ativo']:
-    # O heartbeat herda a chave exata do seu código anterior para ativação segura
-    st_autorefresh(interval=4000, key="duck_hunter_heartbeat")
+    st_autorefresh(interval=4000, key="duck_hunter_heartbeat_v16")
     t_atual = time.strftime('%H:%M:%S')
     
     for m, par, base in [("btc", "BTC/USDT", 65000.0), ("eth", "ETH/USDT", 3450.0), ("sol", "SOL/USDT", 160.0)]:
@@ -201,7 +203,6 @@ if st.session_state['bot_ativo']:
         precos_reais[m] = pr
         msg_ia = f"🦅 CAÇANDO ATIVOS INTEGRADOS // {status} // TRAILING STOP: -{sl}%"
         
-        # Proteção e Trailing Stop Corporativo por Ativo
         saldo_token = st.session_state[f"saldo_{m}"]
         pm_token = st.session_state[f"preco_compra_{m}"]
         
@@ -242,18 +243,24 @@ else:
             precos_reais[m] = base
 
 # -------------------------------------------------------------------
-# Renderização da Interface Visual HUD Unificada
+# Renderização da Interface Visual HUD Unificada (Premium)
 # -------------------------------------------------------------------
 c_tit, c_tog, c_bar = st.columns([2.0, 1.4, 6.6])
 with c_tit:
     st.html('<div class="brand-header">DUCK HUNTER</div>')
 with c_tog:
-    # Vinculado nativamente ao estado booleano 'bot_ativo' do seu código do PDF
-    novo_status = st.toggle("Status", value=st.session_state['bot_ativo'], label_visibility="collapsed")
-    if novo_status != st.session_state['bot_ativo']:
-        st.session_state['bot_ativo'] = novo_status
+    # Função de callback direto linkada ao estado nativo para evitar resets
+    def toggle_callback():
+        st.session_state['bot_ativo'] = st.session_state['toggle_radar_key']
         salvar_na_nuvem_background()
-        st.rerun()
+
+    st.toggle(
+        "Status", 
+        value=st.session_state['bot_ativo'], 
+        key="toggle_radar_key", 
+        label_visibility="collapsed",
+        on_change=toggle_callback
+    )
 with c_bar:
     st.html(f'<div class="target-bar">⚡ QUANTUM ENGINE MATRIX // {msg_ia}</div>')
 
@@ -313,7 +320,7 @@ else:
 with c_btn:
     st.download_button(label=label_btn, data=buf_dados.getvalue(), file_name=nome_arquivo, mime=tipo_mime)
 
-# Terminal Real-Time sem o texto estático interno
+# Terminal Reativo Limpo
 st.markdown("<p style='font-size: 11px; font-weight: 800; color:#475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; margin-bottom: 2px;'>DUCK HUNTER CAÇADOR DE OPORTUNIDADES INICIALIZADO</p>", unsafe_allow_html=True)
 
 terminal_content = ""
