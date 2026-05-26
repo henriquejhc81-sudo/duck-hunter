@@ -8,94 +8,94 @@ import numpy as np
 import io
 
 # 1. Configuração de Página HUD Ultra-Wide e Ocultação Absoluta de Menus
-st.set_page_config(page_title="Duck Hunter ALPHA", page_icon=" 🦆 ", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Duck Hunter ALPHA", page_icon="🦆", layout="wide", initial_sidebar_state="collapsed")
 
 # CSS Premium Terminal Quantum - Margens Fixas e Visual HFT
 st.html("""
-<style>
-.block-container {
-    padding-top: 4.5rem !important;
-    padding-bottom: 2rem !important;
-    max-width: 96% !important;
-}
-.reportview-container { background: #060913 !important; color: #e2e8f0; }
-[data-testid="stSidebar"] { display: none !important; }
-[data-testid="collapsedSidebarMenu"] { display: none !important; }
-
-/* Cabeçalho Limpo Corporativo */
-.brand-header {
-    font-size: 21px;
-    font-weight: 900;
-    color: #00ffc4;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 2px;
-    text-shadow: 0 0 12px rgba(0, 255, 196, 0.4);
-}
-
-/* Grid de Painéis Horizontais */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 14px;
-    margin-top: 15px;
-    margin-bottom: 20px;
-}
-.panel-card {
-    background: #0b0f19;
-    border: 1px solid #1e293b;
-    padding: 14px 18px;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-}
-.panel-label { font-size: 10px; text-transform: uppercase; color: #475569; font-weight: 800; letter-spacing: 1px; }
-.panel-value { font-size: 23px; font-weight: bold; color: #ffffff; margin-top: 2px; font-family: 'Courier New', monospace; }
-.panel-subvalue { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-
-/* HUD de Mensagens da IA */
-.target-bar {
-    background-color: #0c1524;
-    border: 1px solid #1d4ed8;
-    padding: 6px 14px;
-    border-radius: 4px;
-    color: #38bdf8;
-    font-size: 11.5px;
-    font-weight: 700;
-    text-align: center;
-    letter-spacing: 0.5px;
-}
-
-/* Caixa do Terminal Limpa */
-.terminal-box {
-    background: #03050a !important;
-    border: 1px solid #1e293b !important;
-    border-left: 3px solid #00ffc4 !important;
-    padding: 15px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 12.5px;
-    min-height: 220px;
-    max-height: 350px;
-    overflow-y: auto;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-}
-
-/* Central de Exportação Inline */
-div[data-testid="stDownloadButton"] button {
-    background-color: #0c1524 !important;
-    border: 1px solid #00ffc4 !important;
-    color: #00ffc4 !important;
-    padding: 6px 18px !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-    border-radius: 4px !important;
-    width: 100% !important;
-}
-div[data-testid="stDownloadButton"] button:hover { background-color: #00ffc4 !important; color: #060913 !important; }
-
-/* Forçar a cor do Toggle Ativado para o padrão do HUD (Verde/Cyan) */
-input:checked + div { background-color: #00ffc4 !important; }
-div[data-baseweb="checkbox"] [data-checked="true"] { background-color: #00ffc4 !important; }
-</style>
+    <style>
+    .block-container { 
+        padding-top: 4.5rem !important; 
+        padding-bottom: 2rem !important; 
+        max-width: 96% !important;
+    }
+    .reportview-container { background: #060913 !important; color: #e2e8f0; }
+    [data-testid="stSidebar"] { display: none !important; }
+    [data-testid="collapsedSidebarMenu"] { display: none !important; }
+    
+    /* Cabeçalho Limpo Corporativo */
+    .brand-header {
+        font-size: 21px; 
+        font-weight: 900; 
+        color: #00ffc4; 
+        font-family: 'Courier New', monospace; 
+        letter-spacing: 2px;
+        text-shadow: 0 0 12px rgba(0, 255, 196, 0.4);
+    }
+    
+    /* Grid de Painéis Horizontais */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 14px;
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+    .panel-card {
+        background: #0b0f19;
+        border: 1px solid #1e293b;
+        padding: 14px 18px;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .panel-label { font-size: 10px; text-transform: uppercase; color: #475569; font-weight: 800; letter-spacing: 1px; }
+    .panel-value { font-size: 23px; font-weight: bold; color: #ffffff; margin-top: 2px; font-family: 'Courier New', monospace; }
+    .panel-subvalue { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    
+    /* HUD de Mensagens da IA */
+    .target-bar {
+        background-color: #0c1524;
+        border: 1px solid #1d4ed8;
+        padding: 6px 14px;
+        border-radius: 4px;
+        color: #38bdf8;
+        font-size: 11.5px;
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Caixa do Terminal Limpa */
+    .terminal-box {
+        background: #03050a !important;
+        border: 1px solid #1e293b !important;
+        border-left: 3px solid #00ffc4 !important;
+        padding: 15px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 12.5px;
+        min-height: 220px;
+        max-height: 350px;
+        overflow-y: auto;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+    }
+    
+    /* Central de Exportação Inline */
+    div[data-testid="stDownloadButton"] button {
+        background-color: #0c1524 !important;
+        border: 1px solid #00ffc4 !important;
+        color: #00ffc4 !important;
+        padding: 6px 18px !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        border-radius: 4px !important;
+        width: 100% !important;
+    }
+    div[data-testid="stDownloadButton"] button:hover { background-color: #00ffc4 !important; color: #060913 !important; }
+    
+    /* Forçar a cor do Toggle Ativado para o padrão do HUD (Verde/Cyan) */
+    input:checked + div { background-color: #00ffc4 !important; }
+    div[data-baseweb="checkbox"] [data-checked="true"] { background-color: #00ffc4 !important; }
+    </style>
 """)
 
 # -------------------------------------------------------------------
@@ -182,7 +182,7 @@ def analisar_mercado_autonomo(par, base_p):
     try:
         candles = exchange.fetch_ohlcv(par, timeframe='1m', limit=30)
         
-        # FIX (Master): Conversão explícita para np.array blindando contra o TypeError de List vs Array
+        # Conversão explícita para np.array blindando contra o TypeError
         fechamentos = np.array([c[4] for c in candles])
         
         if len(fechamentos) < 15:
@@ -219,7 +219,8 @@ if st.session_state['bot_ativo']:
         saldo_token = st.session_state[f"saldo_{m}"]
         pm_token = st.session_state[f"preco_compra_{m}"]
 
-        if acao == "COMPRAR" and st.session_state['saldo_usdt'] >= 300:
+        # TRAVA DE INTEGRIDADE: and saldo_token == 0 adicionado para evitar metralhadora de compras
+        if acao == "COMPRAR" and st.session_state['saldo_usdt'] >= 300 and saldo_token == 0:
             aloc = st.session_state['saldo_usdt'] * 0.20
             st.session_state['saldo_usdt'] -= aloc
             st.session_state[f"saldo_{m}"] += aloc / pr
@@ -304,9 +305,10 @@ df_logs = pd.DataFrame({"Registro de Auditoria": st.session_state['historico'] i
 c_sel, c_btn, _ = st.columns([4.0, 3.0, 3.0])
 
 with c_sel:
+    # Renomeada a opção para Relatório Comercial (.md)
     formato = st.selectbox(
         "Selecione o formato de saída do documento",
-        ["Planilha Excel (.csv)", "Bloco de Notas (.txt)", "Relatório Comercial (.pdf)"],
+        ["Planilha Excel (.csv)", "Bloco de Notas (.txt)", "Relatório Comercial (.md)"],
         label_visibility="collapsed"
     )
 
@@ -323,15 +325,16 @@ elif "Notas" in formato:
     tipo_mime = "text/plain"
     label_btn = " 📄  DOWNLOAD EM TXT"
 else:
+    # Corrigido: Exportação para Markdown ao invés de PDF para evitar corromper o arquivo
     buf_dados = io.StringIO()
     buf_dados.write("==================================================\n")
     buf_dados.write("            DUCK HUNTER EXECUTIVE REPORT          \n")
     buf_dados.write("==================================================\n\n")
     for log in st.session_state['historico']:
         buf_dados.write(f"- {log}\n")
-    nome_arquivo = "report_duck.pdf"
-    tipo_mime = "application/pdf"
-    label_btn = " 🖨️  GERAR DOCUMENTO PDF"
+    nome_arquivo = "report_duck.md"
+    tipo_mime = "text/markdown"
+    label_btn = " 🖨️  GERAR DOCUMENTO DE RELATÓRIO"
 
 with c_btn:
     st.download_button(label=label_btn, data=buf_dados.getvalue(), file_name=nome_arquivo, mime=tipo_mime)
